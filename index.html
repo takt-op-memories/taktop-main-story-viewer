@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content=".r91">
+    <meta name="description" content="takt op. Memories  | Main Story Viewer">
+    <meta name="application-name" content="takt op. Memories">
+    <title>takt op. Memories | Main Story Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <meta name="msapplication-TileColor" content="#6200ee">
+    <meta name="theme-color" content="#6200ee">
+    <meta property="og:title" content="takt op. Memories | Main Story Viewer">
+    <meta property="og:description" content="Fan-made main story viewer for takt op. Memories">
+    <meta property="og:type" content="website">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" href="./src/images/favicon.ico" />
+    <link rel="stylesheet" href="./src/styles/style.css">
+</head>
+
+<body>
+    <noscript>
+        <div class="error-message">
+            JavaScript is required to use this application.
+        </div>
+    </noscript>
+    <header>
+        <h1 class="site-name">takt op. Memories | Main Story Viewer</h1>
+    </header>
+    <!-- Password authentication screen -->
+    <div id="auth-container" class="auth-overlay">
+        <div class="warnings-container"></div>
+        <div class="auth-box">
+            <h2>Authentication required.</h2>
+            <form id="auth-form" onsubmit="return authenticate(event)">
+                <input type="text" id="username" autocomplete="username" style="display: none" aria-hidden="true"
+                    tabindex="-1">
+                <input type="password" id="password" placeholder="Enter your password" autocomplete="new-password"
+                    aria-label="Password" required>
+                <button type="submit">Login</button>
+                <p id="auth-error" style="color:red;display:none">Wrong password.</p>
+            </form>
+            <div id="password-status"></div>
+        </div>
+    </div>
+
+    <!-- Main contents (displayed after authentication) -->
+    <div id="main" style="display:none">
+        <div class="page-title">
+            <h2>Main Story Viewer</h2>
+        </div>
+        <div class="warnings-container"></div>
+
+        <div id="element-selectors">
+            <div class="element-selector">
+                <div></div> <!-- Part -->
+            </div>
+            <div class="element-selector">
+                <div></div> <!-- Chapter -->
+            </div>
+        </div>
+        <button id="display-selectors" onclick="toggleElementSelectors()"></button>
+        <div id="story-list"></div>
+    </div>
+
+    <footer>
+        <h1 class="site-name">takt op. Memories</h1>
+        <div>
+            This page is a fan-made database and is unofficial. This page does not own the rights to the content
+            displayed, and all rights are reserved by their respective owners.
+        </div>
+    </footer>
+    <script src="./src/scripts/main.js" defer></script>
+</body>
+
+</html>

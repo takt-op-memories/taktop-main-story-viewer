@@ -1,0 +1,60 @@
+{
+    "ja": {
+        "title": "takt op. Memories | Main Story Viewer",
+        "pageTitle": "メインストーリービューア",
+        "warning": "表示されるコンテンツには未公開コンテンツやネタバレが含まれる場合があります",
+        "auth": {
+            "title": "認証が必要です",
+            "placeholder": "パスワードを入力してください",
+            "error": "パスワードが無効です",
+            "submit": "認証"
+        },
+        "status": {
+            "updating": "パスワード更新中...",
+            "until": "次回パスワード更新まで：",
+            "error": "更新時刻の取得に失敗しました"
+        },
+        "footer": {
+            "disclaimer": "このページはファンメイドのデータベースで非公式です。表示されているコンテンツの権利は所有しておらず、すべての権利は各権利者に帰属します。"
+        },
+        "selectors": {
+            "part": "パートを選択",
+            "chapter": "チャプターを選択",
+            "toggleShow": "選択項目を表示",
+            "toggleHide": "選択項目を隠す"
+        },
+        "messages": {
+            "requiredSelection": "ストーリーを表示するには、パートとチャプターの両方を選択してください。",
+            "noFiles": "このチャプターには表示できるファイルがありません。"
+        }
+    },
+    "en": {
+        "title": "takt op. Memories | Main Story Viewer",
+        "pageTitle": "Main Story Viewer",
+        "warning": "Displayed content may include unpublished content and spoilers",
+        "auth": {
+            "title": "Authentication required",
+            "placeholder": "Enter password",
+            "error": "Invalid password",
+            "submit": "Login"
+        },
+        "status": {
+            "updating": "Now Updating Password...",
+            "until": "Until next password update:",
+            "error": "Failed to retrieve update time"
+        },
+        "footer": {
+            "disclaimer": "This page is a fan-made database and is unofficial. This page does not own the rights to the content displayed, and all rights are reserved by their respective owners."
+        },
+        "selectors": {
+            "part": "Select Part",
+            "chapter": "Select Chapter",
+            "toggleShow": "Show Selection Items",
+            "toggleHide": "Hide Selection Items"
+        },
+        "messages": {
+            "requiredSelection": "Please select both Part and Chapter to view stories.",
+            "noFiles": "No files available for this chapter."
+        }
+    }
+}
