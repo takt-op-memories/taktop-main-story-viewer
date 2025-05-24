@@ -788,9 +788,11 @@ const StoryPlayer = {
 
     async handleModalSubmit(event) {
         event.preventDefault();
-        const currentLang = Lang.current || 'en';
+        const currentLang = Lang.current || 'en'; // 現在のUI言語
         const langModalTexts = Lang.data?.[currentLang]?.modal;
         const langMessages = Lang.data?.[currentLang]?.messages;
+        const langErrorMessages = Lang.data?.[currentLang]?.errorMessages; // エラーメッセージ用のi18nキーを追加想定
+
 
         if (!this.validateModalForm()) { // validateModalForm を再利用
             let alertMessage = langModalTexts?.validationError || 'Please fill in all required fields (Character, Language, Text).';
@@ -866,15 +868,52 @@ const StoryPlayer = {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || `Submission failed: ${response.statusText}`);
+                // ▼▼▼ 3. バックエンドからのローカライズ対応エラー表示 ▼▼▼
+                let displayErrorMessage;
+                if (result.messageKey && langErrorMessages?.[result.messageKey]) {
+                    // キーに対応する翻訳があればそれを使用
+                    displayErrorMessage = langErrorMessages[result.messageKey];
+                    // 詳細情報があれば置換 (簡易的な例)
+                    if (result.details) {
+                        for (const key in result.details) {
+                            displayErrorMessage = displayErrorMessage.replace(`{{${key}}}`, result.details[key]);
+                        }
+                    }
+                } else if (result.message) {
+                    // キーがない、または翻訳がない場合は、バックエンドからの直接メッセージ (フォールバック)
+                    displayErrorMessage = result.message;
+                } else {
+                    // それもない場合は汎用的なエラー
+                    displayErrorMessage = langModalTexts?.submitErrorGeneric || `Submission failed: ${response.statusText}`;
+                }
+                throw new Error(displayErrorMessage);
+                // ▲▲▲ ここまで ▲▲▲
             }
 
             console.log('Submission successful:', result);
-            alert(result.message || (langModalTexts?.submitSuccess || 'Data submitted successfully and PR created!'));
+            // ▼▼▼ 1. バックエンドからの成功メッセージキー対応 ▼▼▼
+            let successMessage;
+            if (result.messageKey && langMessages?.[result.messageKey]) {
+                successMessage = langMessages[result.messageKey];
+                if (result.details) {
+                    for (const key in result.details) {
+                        successMessage = successMessage.replace(`{{${key}}}`, result.details[key]);
+                    }
+                }
+            } else if (result.message) { // フォールバックとして直接メッセージ
+                successMessage = result.message;
+            } else { // 究極のフォールバック
+                successMessage = (langModalTexts?.submitSuccess || 'Data submitted successfully and PR created!');
+            }
+            alert(successMessage);
+            // ▲▲▲ ここまで ▲▲▲
             this.closeEditModal();
         } catch (error) {
             console.error('Submission error:', error);
-            alert(langModalTexts?.submitError || `Submission failed: ${error.message}`);
+            // ▼▼▼ 2. エラー表示のローカライズ (catchブロックのエラーも) ▼▼▼
+            // error.message には既にローカライズされたメッセージが入っている可能性がある
+            alert(error.message || (langModalTexts?.submitError || 'An unexpected error occurred.'));
+            // ▲▲▲ ここまで ▲▲▲
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = originalButtonText;
