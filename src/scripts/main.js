@@ -808,14 +808,30 @@ const StoryPlayer = {
         if (!form || !this.editingItemData) return;
 
         const formData = new FormData(form);
+
+        const selectedCharacter = this.characters.find(c => c.id === this.state.selectedCharacterId); // 仮のキャラクター取得方法
+        if (!selectedCharacter) {
+            console.error('Selected character not found');
+            // エラー表示などの処理
+            return;
+        }
+
         const submittedData = {
-            originalFile: this.editingItemData.name,
-            part: this.selectedPart,
-            chapter: this.selectedChapter,
-            characterId: formData.get('character'),
-            language: formData.get('language'),
-            text: formData.get('text'), // 送信時はtrimされた値ではなく元の入力値を送信
-            contributor: formData.get('contributor') || null,
+            originalFile: this.state.editingItem.originalFile,
+            part: this.state.editingItem.part,
+            chapter: this.state.editingItem.chapter,
+            // characterId: this.state.selectedCharacterId, // ← 削除
+            characterNames: { // 各言語のキャラクター名を渡す (実際のプロパティ名に合わせてください)
+                ja: selectedCharacter.name_ja, // 例: 日本語名
+                en: selectedCharacter.name_en, // 例: 英語名
+                // ko: selectedCharacter.name_ko, // 例: 韓国語名
+                // 'zh-CN': selectedCharacter.name_zh_cn, // 例: 中国語(簡体)名
+                // 'zh-TW': selectedCharacter.name_zh_tw, // 例: 中国語(繁体)名
+                // 他に必要な言語があれば追加
+            },
+            language: this.state.selectedLanguage,
+            text: this.state.editedText,
+            contributor: this.state.contributorName || null, // 既存のまま
         };
 
         console.log('Modal Submitted Data:', submittedData);
