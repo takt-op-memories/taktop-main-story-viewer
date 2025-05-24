@@ -332,6 +332,9 @@ const StoryPlayer = {
     activeModal: null, // 現在表示中のモーダル
     editingItemData: null, // モーダルで編集中のアイテムデータ
 
+    playAllItems: [],
+    currentPlayAllIndex: 0,
+
     // --- 仮のキャラクターリストと言語リスト ---
     // 本来はAPIや設定ファイルから取得する
     availableCharacters: [],
@@ -1139,23 +1142,54 @@ const StoryPlayer = {
         if (!this.selectedPart || !this.selectedChapter) {
             this.updateRequiredSelectionMessage();
             this.clearStoryList();
+            const bulkControlsContainer = document.querySelector('.bulk-controls');
+            if (bulkControlsContainer) {
+                bulkControlsContainer.style.display = 'none';
+                bulkControlsContainer.innerHTML = ''; // Clear content when hiding
+            }
             return;
         }
 
         const storyList = document.getElementById('story-list');
         storyList.innerHTML = ''; // Clear previous items
+        const bulkControls = document.querySelector('.bulk-controls');
+        bulkControls.innerHTML = ''; // Clear previous items/buttons
+        bulkControls.style.display = 'flex'; // Ensure flex display for direct children
 
         this.storyFiles = await this.fetchStoryFiles(this.selectedPart, this.selectedChapter);
 
         if (this.storyFiles.length === 0) {
             const noFilesMessage = Lang.data?.[Lang.current]?.messages?.noFiles || 'No files found for this selection.';
             storyList.innerHTML = `<p class="no-files-message">${noFilesMessage}</p>`;
+            bulkControls.style.display = 'none'; // Hide bulk controls if no files
             return;
         }
+
+        // Add bulk controls
+        const strings = Lang.data[Lang.current].controls;
+        // Play All Button
+        const playAllButton = document.createElement('button');
+        playAllButton.onclick = () => StoryPlayer.togglePlayAll();
+        playAllButton.className = 'play-btn play-all-btn'; // Use existing button classes or specific ones
+        playAllButton.innerHTML = `
+            <span class="material-icons">play_arrow</span>
+            <span>${strings.playAll}</span>`;
+        bulkControls.appendChild(playAllButton);
+
+        // Download All Button
+        const downloadAllButton = document.createElement('button');
+        downloadAllButton.onclick = () => StoryPlayer.confirmDownloadAll();
+        downloadAllButton.className = 'download-btn'; // Use existing button classes or specific ones
+        downloadAllButton.innerHTML = `
+            <span class="material-icons">download</span>
+            <span>${strings.downloadAll}</span>`;
+        bulkControls.appendChild(downloadAllButton);
 
         this.storyFiles.forEach(fileData => {
             const item = document.createElement('div');
             item.className = 'story-item';
+            item.dataset.fileName = fileData.name; // For playAll and downloadAll
+            item.dataset.fileTitle = fileData.title; // For downloadAll
 
             const header = document.createElement('div');
             header.className = 'story-item-header';
@@ -1404,6 +1438,10 @@ const StoryPlayer = {
             return;
         }
 
+        if (this.isPlayingAll) {
+            this.stopPlayAll();
+        }
+
         if (this.currentPlayingItem === buttonElement) {
             this.audioElement?.pause();
             this.resetPlayButton(buttonElement);
@@ -1456,5 +1494,259 @@ const StoryPlayer = {
         const icon = button.querySelector('.material-icons');
         button.classList.remove('playing');
         if (icon) icon.textContent = 'play_arrow';
+    },
+
+    async playNextInAll() {
+        if (this.currentPlayAllIndex < this.playAllItems.length && this.isPlayingAll) {
+            const item = this.playAllItems[this.currentPlayAllIndex];
+            const fileName = item.dataset.fileName;
+            const buttonElement = item.querySelector('.play-btn');
+
+            if (!fileName || !buttonElement) {
+                console.warn('Skipping item in playAll due to missing data:', item);
+                this.currentPlayAllIndex++;
+                this.playNextInAll();
+                return;
+            }
+
+            if (this.currentPlayingItem) { // Reset previous if any
+                this.resetPlayButton(this.currentPlayingItem);
+                this.resetPlayingItem(this.currentPlayingItem);
+            }
+            scrollIntoViewIfNeeded(item);
+
+            const audioUrl = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileName}.mp3`;
+            this.audioElement = new Audio(audioUrl);
+
+            this.audioElement.play().catch(e => {
+                console.error(`Error playing ${fileName} in playAll:`, e);
+                this.resetPlayButton(buttonElement);
+                this.resetPlayingItem(item);
+                this.currentPlayAllIndex++;
+                this.playNextInAll(); // Try next
+            });
+
+            this.setPlayingButton(buttonElement);
+            this.setPlayingItem(item); // Pass the whole item
+            this.currentPlayingItem = buttonElement;
+
+
+            this.audioElement.onended = () => {
+                this.resetPlayButton(buttonElement);
+                this.resetPlayingItem(item);
+                this.currentPlayingItem = null;
+                this.currentPlayAllIndex++;
+                this.playNextInAll();
+            };
+            this.audioElement.onerror = () => {
+                console.error(`Audio playback error for ${fileName} in playAll`);
+                this.resetPlayButton(buttonElement);
+                this.resetPlayingItem(item);
+                this.currentPlayingItem = null;
+                this.currentPlayAllIndex++;
+                this.playNextInAll(); // Try next
+            };
+        } else {
+            this.stopPlayAll(); // All items played or stopped
+        }
+    },
+
+    async togglePlayAll() {
+        const password = sessionStorage.getItem(STORAGE_KEY.PASSWORD);
+        if (!password) { Auth.clearAndReload(); return; }
+        const isValid = await Auth.verify(password);
+        if (!isValid) { Auth.clearAndReload(); return; }
+
+        const playAllBtn = document.querySelector('.bulk-controls div .play-all-btn');
+        const icon = playAllBtn.querySelector('.material-icons');
+        const span = playAllBtn.querySelector('span:last-child');
+        const strings = Lang.data[Lang.current].controls;
+
+        if (this.isPlayingAll) {
+            this.stopPlayAll();
+        } else {
+            this.playAllItems = Array.from(document.querySelectorAll('#story-list .story-item'));
+            if (this.playAllItems.length === 0) return;
+
+            this.isPlayingAll = true;
+            this.currentPlayAllIndex = 0;
+            if (this.currentPlayingItem) { // Stop individual play if any
+                this.audioElement?.pause();
+                this.resetPlayButton(this.currentPlayingItem);
+                this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
+                this.currentPlayingItem = null;
+            }
+            this.playNextInAll();
+            playAllBtn.classList.add('playing');
+            icon.textContent = 'stop';
+            span.textContent = strings.stop;
+        }
+    },
+
+    stopPlayAll() {
+        this.isPlayingAll = false;
+        if (this.audioElement) {
+            this.audioElement.pause();
+        }
+        if (this.currentPlayingItem) {
+            this.resetPlayButton(this.currentPlayingItem);
+            this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
+            this.currentPlayingItem = null;
+        }
+        this.playAllItems = [];
+        this.currentPlayAllIndex = 0;
+
+        const playAllBtn = document.querySelector('.bulk-controls div .play-all-btn');
+        if (playAllBtn) {
+            const icon = playAllBtn.querySelector('.material-icons');
+            const span = playAllBtn.querySelector('span:last-child');
+            const strings = Lang.data[Lang.current].controls;
+            playAllBtn.classList.remove('playing');
+            icon.textContent = 'play_arrow';
+            span.textContent = strings.playAll;
+        }
+    },
+
+    createProgressOverlay() {
+        if (this.progressOverlay) return;
+        const strings = Lang.data[Lang.current].controls;
+        const overlay = document.createElement('div');
+        overlay.className = 'progress-overlay';
+        overlay.innerHTML = `
+            <div class="progress-box">
+                <p class="progress-text">${strings.downloading}</p>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <p class="progress-status">0% (0 / 0)</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        this.progressOverlay = overlay;
+    },
+
+    updateProgress(current, total) {
+        if (!this.progressOverlay) return;
+        const fill = this.progressOverlay.querySelector('.progress-bar-fill');
+        const status = this.progressOverlay.querySelector('.progress-status');
+        const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+        fill.style.width = `${percentage}%`;
+        status.textContent = `${percentage}% (${current} / ${total})`;
+    },
+
+    removeProgressOverlay() {
+        if (this.progressOverlay) {
+            this.progressOverlay.remove();
+            this.progressOverlay = null;
+        }
+    },
+
+    async confirmDownloadAll() {
+        const strings = Lang.data[Lang.current].controls;
+        const messages = Lang.data[Lang.current].messages;
+        const itemsToDownload = Array.from(document.querySelectorAll('#story-list .story-item'));
+
+        if (itemsToDownload.length === 0) {
+            alert(messages.noFilesToDownload || "No files to download.");
+            return;
+        }
+
+        if (confirm(strings.downloadConfirm || "Download all displayed voice files?")) {
+            await this.downloadAll(itemsToDownload);
+        }
+    },
+
+    async downloadAll(items) {
+        const password = sessionStorage.getItem(STORAGE_KEY.PASSWORD);
+        if (!password) { Auth.clearAndReload(); return; }
+
+        const isValid = await Auth.verify(password);
+        if (!isValid) { Auth.clearAndReload(); return; }
+
+        this.createProgressOverlay();
+        const zip = new JSZip();
+        let downloadedCount = 0;
+        const totalFiles = items.length;
+        this.updateProgress(downloadedCount, totalFiles);
+
+        const downloadPromises = items.map(async (item, index) => {
+            const fileName = item.dataset.fileName;
+            const fileTitle = item.dataset.fileTitle || fileName;
+            if (!fileName) {
+                console.warn(`Skipping download for item without fileName:`, item);
+                return Promise.resolve(); // Resolve to not break Promise.all
+            }
+
+            const url = `${CONFIG.DB_BASE}src/wav/${this.selectedPart}/${this.selectedChapter}/${fileName}.wav`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+                zip.file(`${fileTitle}.wav`, blob);
+                downloadedCount++;
+                this.updateProgress(downloadedCount, totalFiles);
+            } catch (error) {
+                console.error(`Failed to download ${fileName}:`, error);
+                // Optionally, notify user about individual file failure
+            }
+        });
+
+        try {
+            await Promise.all(downloadPromises);
+            if (Object.keys(zip.files).length > 0) {
+                const content = await zip.generateAsync({ type: "blob" });
+                const zipFileName = `${this.selectedPart}_${this.selectedChapter}_voices.zip`;
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = zipFileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } else {
+                const langErrorMessages = Lang.data?.[Lang.current]?.errorMessages;
+                alert(langErrorMessages?.downloadAllFailed || "No files could be prepared for download.");
+            }
+        } catch (error) {
+            console.error('Error generating zip file:', error);
+            const langErrorMessages = Lang.data?.[Lang.current]?.errorMessages;
+            alert(langErrorMessages?.downloadAllFailed || "An error occurred while preparing the download.");
+        } finally {
+            this.removeProgressOverlay();
+        }
     }
 };
+
+const scrollTopBtn = document.createElement('button');
+scrollTopBtn.className = 'scroll-top';
+scrollTopBtn.innerHTML = '<span class="material-icons">arrow_upward</span>';
+document.body.appendChild(scrollTopBtn);
+
+window.addEventListener('scroll', () => {
+    scrollTopBtn.classList.toggle('visible', window.scrollY > 200);
+});
+
+scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+function scrollIntoViewIfNeeded(element) {
+    if (element) {
+        const rect = element.getBoundingClientRect();
+        const isVisible = (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+        if (!isVisible) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        element.classList.add('scrolled-into-view');
+        setTimeout(() => {
+            element.classList.remove('scrolled-into-view');
+        }, 1000);
+    }
+}

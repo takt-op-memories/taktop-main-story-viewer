@@ -1002,6 +1002,183 @@ footer .site-name {
     }
 }
 
+/* Bulk Controls */
+.bulk-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: auto;
+    margin-bottom: 1rem;
+    max-width: 600px;
+    /* Center and add bottom margin */
+
+}
+
+.bulk-controls button {
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex: 1;
+    /* Distribute space equally */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    /* Space between icon and text */
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+    min-width: 150px;
+    /* Optional: Set a minimum width similar to .element-selector's content */
+    /* max-width: 250px; */
+    /* Optional: Set a maximum width if needed */
+}
+
+.bulk-controls button span {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.bulk-controls .material-icons {
+    font-size: 1.2em;
+    /* Adjust icon size */
+}
+
+.bulk-controls .play-all-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.bulk-controls .play-all-btn:hover {
+    background-color: #7a36ff;
+    /* Darker primary */
+}
+
+.bulk-controls .download-btn {
+    background-color: var(--secondary-color);
+    color: var(--background-color);
+    /* For contrast */
+}
+
+.bulk-controls .download-btn:hover {
+    background-color: #00bfa5;
+    /* Darker secondary */
+}
+
+.bulk-controls .play-all-btn.playing {
+    background-color: var(--error-color);
+}
+
+.bulk-controls .play-all-btn.playing:hover {
+    background-color: #b74c5c;
+    /* Darker error */
+}
+
+/* Progress Overlay */
+.progress-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    /* Higher than modal */
+}
+
+.progress-box {
+    background: var(--surface-color);
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.progress-text {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    /* Slightly thicker bar */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary-color);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* Scroll into view helper */
+.scrolled-into-view {
+    scroll-margin-top: 80px;
+    /* Adjust based on fixed header height */
+}
+
+.scrolled-into-view {
+    scroll-margin-top: 80px;
+    /* Adjust based on fixed header height */
+}
+
+/* Scroll to top button */
+.scroll-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--primary-color);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 99;
+    border: none;
+    /* Ensure no default border */
+}
+
+.scroll-top:hover {
+    transform: scale(1.1);
+    -webkit-transform: scale(1.1);
+    -moz-transform: scale(1.1);
+    -ms-transform: scale(1.1);
+    -o-transform: scale(1.1);
+}
+
+.scroll-top.visible {
+    opacity: 1;
+}
+
+.scroll-top .material-icons {
+    font-size: 24px;
+}
+
 /* Hide elements when printing */
 @media print {
     body * {
