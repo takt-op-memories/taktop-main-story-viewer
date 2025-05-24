@@ -537,11 +537,11 @@ const StoryPlayer = {
 
             const fileNameDiv = document.createElement('div');
             fileNameDiv.className = 'story-file-name';
-            fileNameDiv.textContent = fileData.name; // Use fileData.name for the filename display
+            fileNameDiv.textContent = fileData.title; // Use fileData.title for the filename display
 
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
-            textDiv.textContent = fileData.title; // Use fileData.title for the story text
+            textDiv.textContent = fileData.character_name; // Use fileData.character_name for the story text
 
             const audio = new Audio();
             // Construct the audio source URL using DB_BASE, part, chapter, and fileData.name
