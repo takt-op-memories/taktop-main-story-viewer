@@ -159,12 +159,12 @@ button:active {
     /* Allow wrapping on smaller screens */
     gap: 1rem;
     margin-bottom: 1rem;
-    flex-direction: column;
+    flex-direction: row;
     /* Default to vertical stacking */
 }
 
 .element-selector {
-    flex: 1 1 100%;
+    flex: 1;
     /* Make selectors take full width in column layout */
     min-width: 200px;
     /* Minimum width for selectors */
