@@ -1154,7 +1154,6 @@ const StoryPlayer = {
         }
 
         this.storyFiles.forEach(fileData => {
-            // ... (item, header, fileNameDiv の生成) ...
             const item = document.createElement('div');
             item.className = 'story-item';
 
@@ -1168,30 +1167,35 @@ const StoryPlayer = {
 
             const currentLang = Lang.current || 'en';
             const langMessages = Lang.data?.[currentLang]?.messages;
-            let isDataMissing = false;
-            let contributionMessage = '';
+            let isDataMissing = false; // この変数はメニューボタンの挙動のために残す
+            let contributionMessage = ''; // ツールチップ用
 
-            if ((currentLang === 'ja' || currentLang === 'en') && langMessages) {
-                let characterName = '';
-                let storyText = '';
-                if (currentLang === 'ja') {
-                    characterName = fileData.character_name || '';
-                    storyText = fileData.text || '';
-                } else {
-                    characterName = fileData.character_enName || fileData.character_name || '';
-                    storyText = fileData.text_en || fileData.text || '';
-                }
-                const unknownCharStr = langMessages.unknownCharacter || '###NEVER_MATCH_CHAR###';
-                const undefinedTextStr = langMessages.undefinedText || '###NEVER_MATCH_TEXT###';
-                const isCharacterUnknown = characterName.toLowerCase() === unknownCharStr.toLowerCase();
-                const isTextUndefined = storyText.toLowerCase() === undefinedTextStr.toLowerCase();
-                if (isCharacterUnknown && isTextUndefined) {
-                    isDataMissing = true;
-                    contributionMessage = langMessages.dataContributionRequest || '';
+            // ▼▼▼ 1. 「データの追加にご協力ください」の表示条件変更 ▼▼▼
+            let textForSelectedLang;
+            if (currentLang === 'ja') {
+                textForSelectedLang = fileData.text;
+            } else if (currentLang === 'en') {
+                textForSelectedLang = fileData.text_en;
+            } else if (fileData.localizations) { // その他の言語の場合
+                const localization = fileData.localizations.find(l => l.lang === currentLang);
+                if (localization) {
+                    textForSelectedLang = localization.text;
                 }
             }
+            // textForSelectedLang が undefined の場合、または i18n の "undefined" 文字列の場合
+            const undefinedStringFromI18n = (langMessages?.undefinedText || 'undefined').toLowerCase();
+            const isTextEffectivelyUndefined = textForSelectedLang === undefined ||
+                textForSelectedLang === null ||
+                (typeof textForSelectedLang === 'string' && textForSelectedLang.trim().toLowerCase() === undefinedStringFromI18n);
 
-            if (isDataMissing) {
+            if (isTextEffectivelyUndefined) {
+                isDataMissing = true; // メニューの挙動のために設定
+                contributionMessage = langMessages?.dataContributionRequest || 'Data contribution requested'; // ツールチップメッセージ
+            }
+            // ▲▲▲ 表示条件変更ここまで ▲▲▲
+
+
+            if (isTextEffectivelyUndefined) { // 条件を isTextEffectivelyUndefined に変更
                 const indicator = document.createElement('div');
                 indicator.className = 'data-missing-indicator';
                 const icon = document.createElement('span');
@@ -1212,15 +1216,63 @@ const StoryPlayer = {
             menuButton.className = 'story-item-menu-btn';
             menuButton.setAttribute('aria-label', Lang.data?.[currentLang]?.buttons?.menu || 'Menu');
             menuButton.innerHTML = '<span class="material-icons">more_vert</span>';
-            menuButton.addEventListener('click', (e) => this.showItemMenu(e, fileData, isDataMissing));
+            // メニューボタンに渡す isDataMissing は、テキストが未定義かどうかで判定
+            menuButton.addEventListener('click', (e) => this.showItemMenu(e, fileData, isTextEffectivelyUndefined));
             header.appendChild(menuButton);
 
-            // ... (content, characterIconDiv, dialogueDiv, controlsDiv の生成は前回と同様) ...
             const content = document.createElement('div');
             content.className = 'story-item-content';
             const characterIconDiv = document.createElement('div');
             characterIconDiv.className = 'story-character-icon';
-            characterIconDiv.innerHTML = '<span class="material-icons">account_circle</span>';
+
+            // ▼▼▼ 2. キャラクターアイコン表示処理 (id を使用) ▼▼▼
+            let characterIconHtml = '<span class="material-icons">account_circle</span>'; // デフォルトアイコン
+            let speakerCharData = null; // character.json からのキャラクターデータ
+            const nameJa = fileData.character_name;
+            const nameEn = fileData.character_enName;
+
+            if (this.availableCharacters && this.availableCharacters.length > 0) {
+                // まず、voice.json の名前情報から character.json の該当キャラクターを探す
+                speakerCharData = this.availableCharacters.find(c => {
+                    if (nameJa && c.name.ja === nameJa) return true;
+                    if (nameEn && c.name.en === nameEn) return true;
+                    // 他の言語での名前もチェックする場合 (character.json の構造に依存)
+                    // if (fileData.localizations && c.name) {
+                    //     return fileData.localizations.some(fl => c.name[fl.lang] && fl.name === c.name[fl.lang]);
+                    // }
+                    return false;
+                });
+
+                // ▼▼▼ 修正点: speakerCharData.id を使用してアイコンファイル名を生成 ▼▼▼
+                if (speakerCharData && speakerCharData.id) { // キャラクターが見つかり、id が存在する場合
+                    const characterId = speakerCharData.id;
+                    // アイコンファイル名の命名規則を仮定 (例: char001_icon.png)
+                    // この命名規則は実際のファイル名に合わせてください
+                    const iconFileName = `${characterId}.png`;
+                    const iconUrl = `./src/images/character_icons/${iconFileName}`;
+                    // ▲▲▲ 修正点ここまで ▲▲▲
+
+                    // アイコンが存在するかどうかをチェックする機能はブラウザの標準機能では難しいため、
+                    // ここではファイルが存在すると仮定してimgタグを生成します。
+                    // もし存在しない場合にデフォルトアイコンを表示したい場合は、img要素のonerrorイベントを使うなどの工夫が必要です。
+
+                    const altText = speakerCharData.name[currentLang] || speakerCharData.name.ja || (langMessages?.unknownCharacter || 'Unknown');
+                    characterIconHtml = `<img src="${iconUrl}" alt="${altText}" class="dialogue-character-icon-img" onerror="this.style.display='none'; this.parentElement.querySelector('.material-icons').style.display='inline-block';">`;
+                    // onerror で画像読み込み失敗時にデフォルトアイコンを表示するように試みる
+                    // (デフォルトアイコンを最初から非表示にしておく必要あり。CSSで調整)
+                }
+            }
+            // デフォルトアイコンを最初から表示しておき、画像が成功したら置き換えるか、
+            // 画像読み込み失敗時にデフォルトアイコンを表示する。
+            // onerror を使う場合、デフォルトアイコンは最初非表示にしておく。
+            if (characterIconHtml.includes('<img')) {
+                // 画像がある場合は、デフォルトのMaterial Iconを非表示にするための準備
+                characterIconDiv.innerHTML = characterIconHtml + '<span class="material-icons" style="display:none;">account_circle</span>';
+            } else {
+                characterIconDiv.innerHTML = characterIconHtml; // デフォルトアイコンのみ
+            }
+            // ▲▲▲ キャラクターアイコン表示処理ここまで ▲▲▲
+
 
             const dialogueDiv = document.createElement('div');
             dialogueDiv.className = 'story-dialogue';
@@ -1228,10 +1280,28 @@ const StoryPlayer = {
             const characterNameDiv = document.createElement('div');
             characterNameDiv.className = 'story-character-name';
             let displayName = '';
-            if (currentLang === 'ja') {
-                displayName = fileData.character_name || (langMessages?.unknownCharacter || '不明なキャラクター');
+            // キャラクター名の表示ロジック (UI言語、日本語、英語、ローカライズ、フォールバック)
+            if (currentLang === 'ja' && nameJa) {
+                displayName = nameJa;
+            } else if (currentLang === 'en' && nameEn) {
+                displayName = nameEn;
+            } else if (fileData.localizations) {
+                const localizedName = fileData.localizations.find(l => l.lang === currentLang && l.name);
+                if (localizedName) {
+                    displayName = localizedName.name;
+                } else if (nameJa) {
+                    displayName = nameJa;
+                } else if (nameEn) {
+                    displayName = nameEn;
+                } else {
+                    displayName = langMessages?.unknownCharacter || 'Unknown Character';
+                }
+            } else if (nameJa) {
+                displayName = nameJa;
+            } else if (nameEn) {
+                displayName = nameEn;
             } else {
-                displayName = fileData.character_enName || fileData.character_name || (langMessages?.unknownCharacter || 'Unknown Character');
+                displayName = langMessages?.unknownCharacter || 'Unknown Character';
             }
             characterNameDiv.textContent = displayName;
 
@@ -1239,12 +1309,14 @@ const StoryPlayer = {
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
             let displayText = '';
-            if (currentLang === 'ja') {
-                displayText = fileData.text || (langMessages?.undefinedText || '未定義');
+            // テキストの表示ロジック (UI言語、日本語、英語、ローカライズ、フォールバック)
+            // isTextEffectivelyUndefined で使用した textForSelectedLang を再利用
+            if (isTextEffectivelyUndefined) {
+                displayText = `<span class="undefined-text">(${(langMessages?.undefinedText || 'undefined')})</span>`;
             } else {
-                displayText = fileData.text_en || fileData.text || (langMessages?.undefinedText || 'undefined');
+                displayText = this.formatText ? this.formatText(textForSelectedLang) : textForSelectedLang; // formatTextメソッドがあれば使用
             }
-            textDiv.textContent = displayText;
+            textDiv.innerHTML = displayText; // innerHTML を使用して span タグを解釈
 
 
             dialogueDiv.appendChild(characterNameDiv);
