@@ -556,36 +556,3 @@ const StoryPlayer = {
         });
     },
 };
-
-function toggleElementSelectors() {
-    const elementSelectors = document.getElementById('element-selectors');
-    const displaySelectorsButton = document.getElementById('display-selectors');
-    const isHidden = elementSelectors.style.display === 'none';
-
-    elementSelectors.style.display = isHidden ? 'flex' : 'none';
-    if (Lang.data && Lang.data[Lang.current]) { // Check if Lang.data is loaded
-        displaySelectorsButton.textContent = isHidden ?
-            Lang.data[Lang.current].selectors.toggleHide :
-            Lang.data[Lang.current].selectors.toggleShow;
-    }
-    loadHeight(); // Recalculate layout
-}
-
-// Initialize toggle button text on load
-window.addEventListener('DOMContentLoaded', () => {
-    // Ensure Lang is initialized before calling this
-    if (Lang.data && Lang.data[Lang.current]) {
-        StoryPlayer.updateToggleButtonText();
-    }
-    // Set initial state of selectors display based on screen width or preference
-    const elementSelectors = document.getElementById('element-selectors');
-    if (window.innerWidth < 768) { // Example: hide on small screens initially
-        elementSelectors.style.display = 'none';
-    } else {
-        elementSelectors.style.display = 'flex';
-    }
-    // Update button text accordingly AFTER setting display style
-    if (Lang.data && Lang.data[Lang.current]) {
-        StoryPlayer.updateToggleButtonText();
-    }
-});
