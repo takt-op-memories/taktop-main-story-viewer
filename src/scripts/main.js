@@ -141,13 +141,6 @@ const Lang = {
             }
         }
 
-        const displaySelectorsButton = document.getElementById('display-selectors');
-        const elementSelectors = document.getElementById('element-selectors');
-        if (displaySelectorsButton && elementSelectors) {
-            displaySelectorsButton.textContent = elementSelectors.style.display === 'none' ?
-                strings.selectors.toggleShow :
-                strings.selectors.toggleHide;
-        }
         StoryPlayer.updateSelectorLabels();
         StoryPlayer.updateRequiredSelectionMessage();
     }
@@ -363,8 +356,6 @@ const StoryPlayer = {
         chapterSelector.innerHTML = `<option value="">${chapterSelectText}</option>`;
         document.querySelector('.element-selector:nth-child(2)').style.display = 'block'; // Always show chapter
 
-        this.updateToggleButtonText();
-
         if (this.selectedPart) {
             partSelector.value = this.selectedPart;
             await this.onPartChange({ target: partSelector });
@@ -564,18 +555,6 @@ const StoryPlayer = {
             storyList.appendChild(item);
         });
     },
-
-    updateToggleButtonText() {
-        const displaySelectorsButton = document.getElementById('display-selectors');
-        const elementSelectors = document.getElementById('element-selectors');
-        if (!Lang.data || !Lang.data[Lang.current]) return; // Ensure Lang data is loaded
-
-        if (displaySelectorsButton && elementSelectors) {
-            displaySelectorsButton.textContent = elementSelectors.style.display === 'none' ?
-                Lang.data[Lang.current].selectors.toggleShow :
-                Lang.data[Lang.current].selectors.toggleHide;
-        }
-    }
 };
 
 function toggleElementSelectors() {
