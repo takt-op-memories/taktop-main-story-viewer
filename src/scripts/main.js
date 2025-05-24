@@ -1557,7 +1557,7 @@ const StoryPlayer = {
         const isValid = await Auth.verify(password);
         if (!isValid) { Auth.clearAndReload(); return; }
 
-        const playAllBtn = document.querySelector('.bulk-controls div .play-all-btn');
+        const playAllBtn = document.querySelector('.bulk-controls .play-all-btn');
         const icon = playAllBtn.querySelector('.material-icons');
         const span = playAllBtn.querySelector('span:last-child');
         const strings = Lang.data[Lang.current].controls;
@@ -1596,7 +1596,7 @@ const StoryPlayer = {
         this.playAllItems = [];
         this.currentPlayAllIndex = 0;
 
-        const playAllBtn = document.querySelector('.bulk-controls div .play-all-btn');
+        const playAllBtn = document.querySelector('.bulk-controls .play-all-btn');
         if (playAllBtn) {
             const icon = playAllBtn.querySelector('.material-icons');
             const span = playAllBtn.querySelector('span:last-child');
