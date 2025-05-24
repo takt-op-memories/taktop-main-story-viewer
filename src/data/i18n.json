@@ -27,6 +27,28 @@
             "unknownCharacter": "不明なキャラクター",
             "undefinedText": "未定義",
             "dataContributionRequest": "データの追加にご協力ください"
+        },
+        "menu": {
+            "editData": "データの修正",
+            "addData": "データの追加"
+        },
+        "modal": {
+            "titleEdit": "データ編集",
+            "titleAdd": "データ追加",
+            "currentInfo": "現在の情報",
+            "file": "ファイル",
+            "character": "キャラクター",
+            "language": "言語",
+            "text": "テキスト",
+            "showContributorInfo": "入力者情報を表示",
+            "hideContributorInfo": "入力者情報を隠す",
+            "contributorName": "入力者名 (任意)",
+            "submit": "送信",
+            "close": "閉じる",
+            "selectCharacter": "キャラクターを選択",
+            "selectLanguage": "言語を選択",
+            "textIsStillUndefined": "テキストが「未定義」のままです。有効なテキストを入力してください。",
+            "validationError": "必須項目（キャラクター、言語、テキスト）を全て入力してください。"
         }
     },
     "en": {
@@ -57,6 +79,28 @@
             "unknownCharacter": "Unknown Character",
             "undefinedText": "undefined",
             "dataContributionRequest": "Please help add data."
+        },
+        "menu": {
+            "editData": "Edit Data",
+            "addData": "Add Data"
+        },
+        "modal": {
+            "titleEdit": "Edit Data",
+            "titleAdd": "Add Data",
+            "currentInfo": "Current Information",
+            "file": "File",
+            "character": "Character",
+            "language": "Language",
+            "text": "Text",
+            "showContributorInfo": "Show Contributor Info",
+            "hideContributorInfo": "Hide Contributor Info",
+            "contributorName": "Contributor Name (Optional)",
+            "submit": "Submit",
+            "close": "Close",
+            "selectCharacter": "Select Character",
+            "selectLanguage": "Select Language",
+            "textIsStillUndefined": "The text field cannot be 'undefined'. Please enter valid text.",
+            "validationError": "Please fill in all required fields (Character, Language, Text)."
         }
     }
 }

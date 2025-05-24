@@ -317,8 +317,8 @@ class AuthStatusChecker {
 const StoryPlayer = {
     selectedPart: null,
     selectedChapter: null,
-    audioElement: null,
-    currentPlayingItem: null,
+    audioElement: null, // モーダル内再生用にも使用
+    currentPlayingItem: null, // メインリストの再生状態
     storyFiles: [], // To store fetched story file names
     isPlayingAll: false,
     progressOverlay: null,
@@ -326,9 +326,52 @@ const StoryPlayer = {
     lastTooltipTrigger: null, // 最後にツールチップを開いたトリガー要素
     boundHandleDocumentClick: null, // bindされたドキュメントクリックハンドラ
 
+    activeMenu: null, // 現在表示中のコンテキストメニュー
+    lastMenuTrigger: null, // 最後にメニューを開いたトリガー要素
+    boundHandleDocumentClickForMenu: null, // メニュー用ドキュメントクリックハンドラ
+    activeModal: null, // 現在表示中のモーダル
+    editingItemData: null, // モーダルで編集中のアイテムデータ
+
+    // --- 仮のキャラクターリストと言語リスト ---
+    // 本来はAPIや設定ファイルから取得する
+    availableCharacters: [],
+    availableLanguages: [ // Lang.data.ja, Lang.data.en のようなキーを想定
+        { id: 'ja', name: '日本語' },
+        { id: 'en', name: 'English' }
+    ],
+    // --- ここまで仮リスト ---
+
     async init() {
         await this.loadSelectors();
+        await this.fetchCharacters();
         this.setupEventListeners();
+    },
+
+    async fetchCharacters() {
+        try {
+            const response = await fetch('https://takt-op-memories.github.io/taktop-voice-player/src/data/character.json');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch characters: ${response.status}`);
+            }
+            const rawCharacters = await response.json();
+            this.availableCharacters = rawCharacters.map(char => ({
+                id: char.id,
+                name: {
+                    ja: char.name,
+                    en: char.nameEn
+                }
+            }));
+            // 「不明なキャラクター」や「その他」を必要に応じて追加
+            // this.availableCharacters.push({ id: 'char_unknown', name: { ja: '不明なキャラクター', en: 'Unknown Character' } });
+            this.availableCharacters.push({ id: 'char_other', name: { ja: 'その他', en: 'Other' } });
+            console.log('Characters loaded:', this.availableCharacters);
+        } catch (error) {
+            console.error('Error fetching characters:', error);
+            // フォールバックやデフォルト値を設定することも検討
+            this.availableCharacters = [
+                { id: 'char_unknown', name: { ja: '不明なキャラクター', en: 'Unknown Character' } }
+            ];
+        }
     },
 
     async loadSelectors() {
@@ -606,6 +649,413 @@ const StoryPlayer = {
         document.addEventListener('click', this.boundHandleDocumentClick, true);
     },
 
+    // --- メニュー関連メソッド ---
+    removeActiveMenu() {
+        if (this.activeMenu) {
+            this.activeMenu.remove();
+            this.activeMenu = null;
+            if (this.boundHandleDocumentClickForMenu) {
+                document.removeEventListener('click', this.boundHandleDocumentClickForMenu, true);
+                this.boundHandleDocumentClickForMenu = null;
+            }
+            this.lastMenuTrigger = null;
+        }
+    },
+
+    _handleDocumentClickForMenu(event) {
+        if (this.activeMenu &&
+            !this.activeMenu.contains(event.target) &&
+            this.lastMenuTrigger && !this.lastMenuTrigger.contains(event.target) // トリガーボタン自身へのクリックは除く
+        ) {
+            this.removeActiveMenu();
+        }
+    },
+
+    showItemMenu(event, fileData, isDataMissing) {
+        const buttonElement = event.currentTarget;
+        event.stopPropagation();
+
+        // 同一ボタンが押された場合はメニューを閉じて終了
+        if (this.activeMenu && this.lastMenuTrigger === buttonElement) {
+            this.removeActiveMenu();
+            return;
+        }
+
+        this.removeActiveMenu();
+        this.removeActiveTooltip();
+        this.lastMenuTrigger = buttonElement; // 新しいトリガーを記憶
+
+        const currentLang = Lang.current || 'en';
+        const langMenuTexts = Lang.data?.[currentLang]?.menu;
+
+        const menu = document.createElement('div');
+        menu.className = 'story-item-context-menu';
+
+        const ul = document.createElement('ul');
+
+        // メニューアイテム定義 (拡張可能にするため配列で管理)
+        const menuItems = [];
+        if (isDataMissing) {
+            menuItems.push({
+                label: langMenuTexts?.addData || 'Add Data',
+                action: 'add_data'
+            });
+        } else {
+            menuItems.push({
+                label: langMenuTexts?.editData || 'Edit Data',
+                action: 'edit_data'
+            });
+        }
+        // 今後他のメニューアイテムを追加する場合はここに push する
+        // menuItems.push({ label: '別の操作', action: 'other_action' });
+
+        menuItems.forEach(itemConfig => {
+            const li = document.createElement('li');
+            li.textContent = itemConfig.label;
+            li.dataset.action = itemConfig.action;
+            li.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.handleMenuAction(itemConfig.action, fileData, isDataMissing);
+                this.removeActiveMenu();
+            });
+            ul.appendChild(li);
+        });
+
+        menu.appendChild(ul);
+        document.body.appendChild(menu);
+        this.activeMenu = menu;
+
+        const buttonRect = event.currentTarget.getBoundingClientRect();
+        menu.style.top = `${buttonRect.bottom + window.scrollY + 2}px`;
+        menu.style.left = `${buttonRect.right + window.scrollX - menu.offsetWidth}px`; // ボタンの右端に合わせる
+
+        this.boundHandleDocumentClickForMenu = this._handleDocumentClickForMenu.bind(this);
+        document.addEventListener('click', this.boundHandleDocumentClickForMenu, true);
+    },
+
+    handleMenuAction(action, fileData, isDataMissing) {
+        if (action === 'add_data' || action === 'edit_data') {
+            this.showEditModal(fileData, isDataMissing);
+        }
+        // 他のアクションの処理
+    },
+
+    // --- モーダル関連メソッド ---
+    closeEditModal() {
+        if (this.activeModal) {
+            this.activeModal.remove();
+            this.activeModal = null;
+            this.editingItemData = null;
+            if (this.audioElement && !this.audioElement.paused) { // モーダルを閉じるときに音声停止
+                this.audioElement.pause();
+                // 必要であればメインリストの再生ボタン状態もリセット
+            }
+        }
+    },
+
+    validateModalForm() {
+        const form = document.getElementById('edit-form');
+        const submitBtn = document.getElementById('modal-submit-btn');
+        if (!form || !submitBtn) return false;
+
+        const character = form.elements['character'].value;
+        const language = form.elements['language'].value;
+        const textInput = form.elements['text'].value.trim();
+
+        // 「未定義」や「undefined」といった文字列そのものでないかもチェック
+        const currentLang = Lang.current || 'en';
+        const langMessages = Lang.data?.[currentLang]?.messages;
+        const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase(); // 判定用に小文字化
+
+        let isTextValid = textInput !== '';
+        if (isTextValid) {
+            // textInput が undefinedTextStr と完全に一致する場合 (大文字小文字区別せず) は無効
+            if (textInput.toLowerCase() === undefinedTextStr) {
+                isTextValid = false;
+            }
+        }
+        // 他にも無効としたい文字列があればここに追加
+        // const ngWords = ['未定義', 'undefined', 'null'];
+        // if (ngWords.map(w => w.toLowerCase()).includes(textInput.toLowerCase())) {
+        //     isTextValid = false;
+        // }
+
+
+        const isValid = character && language && isTextValid;
+        submitBtn.disabled = !isValid;
+        return isValid;
+    },
+
+    async handleModalSubmit(event) {
+        event.preventDefault();
+        const currentLang = Lang.current || 'en';
+        const langModalTexts = Lang.data?.[currentLang]?.modal;
+        const langMessages = Lang.data?.[currentLang]?.messages;
+
+        if (!this.validateModalForm()) { // validateModalForm を再利用
+            let alertMessage = langModalTexts?.validationError || 'Please fill in all required fields (Character, Language, Text).';
+            // テキストフィールドが問題の場合、より具体的なメッセージも検討
+            const textInputValue = document.getElementById('modal-text')?.value.trim().toLowerCase();
+            const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase();
+            if (textInputValue === undefinedTextStr) {
+                alertMessage = langModalTexts?.textIsStillUndefined || `The text field cannot be '${langMessages?.undefinedText || 'undefined'}'. Please enter valid text.`;
+            }
+            alert(alertMessage);
+            return;
+        }
+
+        const form = document.getElementById('edit-form');
+        if (!form || !this.editingItemData) return;
+
+        const formData = new FormData(form);
+        const submittedData = {
+            originalFile: this.editingItemData.name,
+            part: this.selectedPart,
+            chapter: this.selectedChapter,
+            characterId: formData.get('character'),
+            language: formData.get('language'),
+            text: formData.get('text'), // 送信時はtrimされた値ではなく元の入力値を送信
+            contributor: formData.get('contributor') || null,
+        };
+
+        console.log('Modal Submitted Data:', submittedData);
+        // TODO: APIへの送信処理
+        // const endpoint = 'YOUR_ENDPOINT_HERE';
+        // try {
+        //     const response = await fetch(endpoint, {
+        //         method: 'POST',
+        //         headers: { 'Content-Type': 'application/json' },
+        //         body: JSON.stringify(submittedData)
+        //     });
+        //     if (!response.ok) throw new Error(`Submission failed: ${response.statusText}`);
+        //     const result = await response.json();
+        //     console.log('Submission successful:', result);
+        //     alert('Data submitted successfully!');
+        //     this.closeEditModal();
+        //     // this.loadStoryFiles(); // リストを再読み込み
+        // } catch (error) {
+        //     console.error('Submission error:', error);
+        //     alert(`Submission failed: ${error.message}`);
+        // }
+        alert('Data submitted (see console for details). This is a placeholder.');
+        this.closeEditModal();
+    },
+
+    playModalAudio(audioSrc) {
+        if (this.audioElement) {
+            this.audioElement.pause();
+        }
+        this.audioElement = new Audio(audioSrc);
+        const playButton = this.activeModal?.querySelector('.modal-audio-play-btn .material-icons');
+
+        this.audioElement.play()
+            .then(() => {
+                if (playButton) playButton.textContent = 'stop';
+            })
+            .catch(error => {
+                console.error('Modal audio playback error:', error);
+                if (playButton) playButton.textContent = 'play_arrow';
+            });
+
+        this.audioElement.onended = () => {
+            if (playButton) playButton.textContent = 'play_arrow';
+        };
+        this.audioElement.onerror = () => {
+            if (playButton) playButton.textContent = 'play_arrow';
+            console.error('Modal audio error event');
+        };
+    },
+
+    toggleModalAudio(buttonElement, audioSrc) {
+        if (this.audioElement && !this.audioElement.paused && this.audioElement.src.endsWith(audioSrc.substring(audioSrc.lastIndexOf('/') + 1))) {
+            this.audioElement.pause();
+            buttonElement.querySelector('.material-icons').textContent = 'play_arrow';
+        } else {
+            this.playModalAudio(audioSrc);
+            // playModalAudio内でアイコン変更
+        }
+    },
+
+    showEditModal(fileData, isDataMissing) {
+        this.closeEditModal();
+        this.editingItemData = fileData;
+
+        const currentLang = Lang.current || 'en';
+        const langModalTexts = Lang.data?.[currentLang]?.modal;
+        const langMessages = Lang.data?.[currentLang]?.messages;
+
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        // modalOverlay.addEventListener('click', (e) => { // モーダル外クリックで閉じないように削除
+        //     if (e.target === modalOverlay) {
+        //         this.closeEditModal();
+        //     }
+        // });
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        // ... (modalHeader, closeBtn の生成は前回と同様)
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        const titleText = isDataMissing ? (langModalTexts?.titleAdd || 'Add Data') : (langModalTexts?.titleEdit || 'Edit Data');
+        modalHeader.innerHTML = `<h2>${titleText}</h2>`;
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'modal-close-btn';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', langModalTexts?.close || 'Close');
+        closeBtn.onclick = () => this.closeEditModal();
+        modalHeader.appendChild(closeBtn);
+        modalContent.appendChild(modalHeader);
+
+
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+
+        // Current Info & Audio Player
+        const currentInfoDiv = document.createElement('div');
+        currentInfoDiv.className = 'current-info-audio-container';
+
+        const currentInfoTextDiv = document.createElement('div');
+        currentInfoTextDiv.className = 'current-info';
+        currentInfoTextDiv.innerHTML = `
+            <h3>${langModalTexts?.currentInfo || 'Current Information'}</h3>
+            <p><strong>${langModalTexts?.file || 'File'}:</strong> ${fileData.title}</p>
+            <p><strong>${langModalTexts?.character || 'Character'}:</strong> ${currentLang == 'en' ? fileData.character_enName || (langMessages?.unknownCharacter || 'Unknown') : fileData.character_name || (langMessages?.unknownCharacter || 'Unknown')}</p>
+            <p><strong>${langModalTexts?.text || 'Text'}:</strong> ${fileData[`text_${currentLang}`] || fileData.text || (langMessages?.undefinedText || 'N/A')}</p>
+        `;
+        currentInfoDiv.appendChild(currentInfoTextDiv);
+
+        // モーダル内音声再生ボタン (データが存在する場合のみ)
+        if (fileData.name && this.selectedPart && this.selectedChapter) {
+            const audioPlayerDiv = document.createElement('div');
+            audioPlayerDiv.className = 'modal-audio-player';
+            const audioSrc = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileData.name}.mp3`;
+            const playBtn = document.createElement('button');
+            playBtn.type = 'button';
+            playBtn.className = 'modal-audio-play-btn play-btn'; // 既存のplay-btnスタイルを流用可能
+            playBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
+            playBtn.setAttribute('aria-label', Lang.data?.[currentLang]?.buttons?.play || 'Play');
+            playBtn.onclick = () => this.toggleModalAudio(playBtn, audioSrc);
+            audioPlayerDiv.appendChild(playBtn);
+            currentInfoDiv.appendChild(audioPlayerDiv);
+        }
+        modalBody.appendChild(currentInfoDiv);
+
+
+        const form = document.createElement('form');
+        form.id = 'edit-form';
+        form.onsubmit = (e) => this.handleModalSubmit(e);
+        form.oninput = () => this.validateModalForm(); // 入力時にバリデーション
+
+        // Character Select
+        const charDiv = document.createElement('div');
+        // 必須マークの位置調整のため、ラベルテキストとマークを分ける
+        charDiv.innerHTML = `<label for="modal-character">${langModalTexts?.character || 'Character'}:<span class="required-asterisk">*</span></label>`;
+        const charSelect = document.createElement('select');
+        // ... (charSelect の設定は変更なし)
+        charSelect.id = 'modal-character';
+        charSelect.name = 'character';
+        charSelect.required = true;
+        charSelect.innerHTML = `<option value="">${langModalTexts?.selectCharacter || 'Select Character'}</option>`;
+        this.availableCharacters.forEach(char => {
+            const charName = char.name[currentLang] || char.name.en || char.id;
+            const option = new Option(charName, char.id);
+            let currentCharacterId = fileData.character_id;
+            if (!currentCharacterId && fileData.character_name) {
+                const foundChar = this.availableCharacters.find(c =>
+                    (c.name.ja === fileData.character_name) || (c.name.en === fileData.character_name)
+                );
+                if (foundChar) currentCharacterId = foundChar.id;
+            }
+            if (currentCharacterId === char.id) option.selected = true;
+            charSelect.appendChild(option);
+        });
+        charDiv.appendChild(charSelect);
+        form.appendChild(charDiv);
+
+        // Language Select
+        const langDiv = document.createElement('div');
+        langDiv.innerHTML = `<label for="modal-language">${langModalTexts?.language || 'Language'}:<span class="required-asterisk">*</span></label>`;
+        const langSelect = document.createElement('select');
+        // ... (langSelect の設定は変更なし)
+        langSelect.id = 'modal-language';
+        langSelect.name = 'language';
+        langSelect.required = true;
+        langSelect.innerHTML = `<option value="">${langModalTexts?.selectLanguage || 'Select Language'}</option>`;
+        this.availableLanguages.forEach(lang => {
+            const option = new Option(lang.name, lang.id);
+            if (lang.id === currentLang) option.selected = true;
+            langSelect.appendChild(option);
+        });
+        langDiv.appendChild(langSelect);
+        form.appendChild(langDiv);
+
+        // Text Input
+        const textDiv = document.createElement('div');
+        textDiv.innerHTML = `<label for="modal-text">${langModalTexts?.text || 'Text'}:<span class="required-asterisk">*</span></label>`;
+        const textArea = document.createElement('textarea');
+        // ... (textArea の設定は変更なし)
+        textArea.id = 'modal-text';
+        textArea.name = 'text';
+        textArea.rows = 5;
+        textArea.required = true;
+        // 初期値が「未定義」や「undefined」の場合、空にするかユーザーに編集を促す
+        let initialText = fileData[`text_${currentLang}`] || fileData.text || '';
+        const undefinedStrForCurrentLang = (langMessages?.undefinedText || 'undefined').toLowerCase();
+        if (initialText.toLowerCase() === undefinedStrForCurrentLang) {
+            initialText = ''; // または、プレースホルダーで促す
+            // textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
+        }
+        textArea.value = initialText;
+        textDiv.appendChild(textArea);
+        form.appendChild(textDiv);
+
+        // Contributor Info (details/summary)
+        const contributorDetails = document.createElement('details');
+        contributorDetails.className = 'contributor-details';
+        const contributorSummary = document.createElement('summary');
+        contributorSummary.textContent = langModalTexts?.showContributorInfo || 'Contributor Information'; // 初期は表示テキスト
+        contributorDetails.appendChild(contributorSummary);
+
+        const contributorSection = document.createElement('div');
+        contributorSection.className = 'contributor-section-content'; // CSS用クラス
+        contributorSection.innerHTML = `
+            <label for="modal-contributor">${langModalTexts?.contributorName || 'Contributor Name (Optional)'}:</label>
+            <input type="text" id="modal-contributor" name="contributor">
+        `;
+        contributorDetails.appendChild(contributorSection);
+        // summaryのテキストをdetailsのopen/closeで変更する
+        contributorDetails.addEventListener('toggle', function () {
+            if (this.open) {
+                contributorSummary.textContent = langModalTexts?.hideContributorInfo || 'Hide Contributor Info';
+            } else {
+                contributorSummary.textContent = langModalTexts?.showContributorInfo || 'Show Contributor Info';
+            }
+        });
+        form.appendChild(contributorDetails);
+
+        modalBody.appendChild(form);
+        modalContent.appendChild(modalBody);
+
+        const modalFooter = document.createElement('div');
+        modalFooter.className = 'modal-footer';
+        const submitBtn = document.createElement('button');
+        submitBtn.type = 'submit';
+        submitBtn.id = 'modal-submit-btn';
+        submitBtn.textContent = langModalTexts?.submit || 'Submit';
+        submitBtn.setAttribute('form', 'edit-form');
+        submitBtn.disabled = true; // 初期は非活性
+        modalFooter.appendChild(submitBtn);
+        modalContent.appendChild(modalFooter);
+
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+        this.activeModal = modalOverlay;
+
+        charSelect.focus();
+        this.validateModalForm(); // 初期状態のバリデーションを実行
+    },
+
     async loadStoryFiles() {
         if (!this.selectedPart || !this.selectedChapter) {
             this.updateRequiredSelectionMessage();
@@ -625,6 +1075,7 @@ const StoryPlayer = {
         }
 
         this.storyFiles.forEach(fileData => {
+            // ... (item, header, fileNameDiv の生成) ...
             const item = document.createElement('div');
             item.className = 'story-item';
 
@@ -634,77 +1085,60 @@ const StoryPlayer = {
             const fileNameDiv = document.createElement('div');
             fileNameDiv.className = 'story-file-name';
             fileNameDiv.textContent = fileData.title;
-            header.appendChild(fileNameDiv); // fileNameDiv を先に追加
+            header.appendChild(fileNameDiv);
 
-            // --- データ不足インジケーターのロジック ---
             const currentLang = Lang.current || 'en';
             const langMessages = Lang.data?.[currentLang]?.messages;
-            let showDataMissingIndicator = false;
-            let contributionMessage = ''; // ツールチップとテキスト表示用のメッセージを保持
+            let isDataMissing = false;
+            let contributionMessage = '';
 
             if ((currentLang === 'ja' || currentLang === 'en') && langMessages) {
                 let characterName = '';
                 let storyText = '';
-
-                // 現在の言語に応じてキャラクター名とテキストを取得
                 if (currentLang === 'ja') {
                     characterName = fileData.character_name || '';
                     storyText = fileData.text || '';
-                } else { // en およびその他の言語 (フォールバックとして英語キーを優先)
+                } else {
                     characterName = fileData.character_enName || fileData.character_name || '';
                     storyText = fileData.text_en || fileData.text || '';
                 }
-
-                // 判定用の文字列を言語データから取得 (存在しない場合はマッチしない文字列を設定)
                 const unknownCharStr = langMessages.unknownCharacter || '###NEVER_MATCH_CHAR###';
                 const undefinedTextStr = langMessages.undefinedText || '###NEVER_MATCH_TEXT###';
-
-                // キャラクター名とテキストが「不明」「未定義」であるかを判定 (小文字化して比較)
                 const isCharacterUnknown = characterName.toLowerCase() === unknownCharStr.toLowerCase();
                 const isTextUndefined = storyText.toLowerCase() === undefinedTextStr.toLowerCase();
-
                 if (isCharacterUnknown && isTextUndefined) {
-                    showDataMissingIndicator = true;
-                    // 表示/ツールチップ用のメッセージを言語データから取得
+                    isDataMissing = true;
                     contributionMessage = langMessages.dataContributionRequest || '';
                 }
             }
 
-            if (showDataMissingIndicator) {
+            if (isDataMissing) {
                 const indicator = document.createElement('div');
                 indicator.className = 'data-missing-indicator';
-
                 const icon = document.createElement('span');
                 icon.className = 'material-icons data-missing-icon';
                 icon.textContent = 'info';
-                // icon.tabIndex = 0; // 必要に応じてキーボードフォーカス可能に
-                // icon.setAttribute('role', 'button'); // 役割を明確に
-                icon.setAttribute('aria-label', contributionMessage); // スクリーンリーダー用ラベル
-
-                // アイコンクリック時にツールチップ表示関数を呼び出す (thisをStoryPlayerに束縛)
+                icon.setAttribute('aria-label', contributionMessage);
                 icon.addEventListener('click', (e) => this.showContributionTooltip(e, contributionMessage));
-
                 indicator.appendChild(icon);
-
                 const text = document.createElement('span');
-                text.className = 'data-missing-text'; // CSSでスマホ時に非表示
+                text.className = 'data-missing-text';
                 text.textContent = contributionMessage;
                 indicator.appendChild(text);
-
-                header.appendChild(indicator); // 3点ボタンの前、ファイル名の後に挿入
+                header.appendChild(indicator);
             }
-            // --- データ不足インジケーターのロジックここまで ---
+
 
             const menuButton = document.createElement('button');
             menuButton.className = 'story-item-menu-btn';
             menuButton.setAttribute('aria-label', Lang.data?.[currentLang]?.buttons?.menu || 'Menu');
             menuButton.innerHTML = '<span class="material-icons">more_vert</span>';
-            // menuButton.onclick = () => { /* TODO: Implement menu functionality */ };
-            header.appendChild(menuButton); // 最後にメニューボタンを追加
+            menuButton.addEventListener('click', (e) => this.showItemMenu(e, fileData, isDataMissing));
+            header.appendChild(menuButton);
 
+            // ... (content, characterIconDiv, dialogueDiv, controlsDiv の生成は前回と同様) ...
             const content = document.createElement('div');
             content.className = 'story-item-content';
-
             const characterIconDiv = document.createElement('div');
             characterIconDiv.className = 'story-character-icon';
             characterIconDiv.innerHTML = '<span class="material-icons">account_circle</span>';
@@ -715,7 +1149,6 @@ const StoryPlayer = {
             const characterNameDiv = document.createElement('div');
             characterNameDiv.className = 'story-character-name';
             let displayName = '';
-            // 表示用のキャラクター名を設定 (不明な場合は言語データから取得)
             if (currentLang === 'ja') {
                 displayName = fileData.character_name || (langMessages?.unknownCharacter || '不明なキャラクター');
             } else {
@@ -727,7 +1160,6 @@ const StoryPlayer = {
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
             let displayText = '';
-            // 表示用のテキストを設定 (未定義の場合は言語データから取得)
             if (currentLang === 'ja') {
                 displayText = fileData.text || (langMessages?.undefinedText || '未定義');
             } else {
@@ -758,7 +1190,7 @@ const StoryPlayer = {
             item.appendChild(content);
             storyList.appendChild(item);
         });
-        this.updateRequiredSelectionMessage(); // メッセージを更新
+        this.updateRequiredSelectionMessage();
     },
     setPlayingItem(item) {
         if (item) {

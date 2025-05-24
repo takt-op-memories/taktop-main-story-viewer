@@ -653,6 +653,332 @@ footer .site-name {
     /* position: relative; /* しっぽの基準にするため */
 }
 
+/* Story Item Context Menu */
+.story-item-context-menu {
+    position: absolute;
+    background-color: var(--surface-color);
+    /* bodyの背景色より少し明るい色 */
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    z-index: 1000;
+    /* 他の要素より手前 */
+    min-width: 160px;
+}
+
+.story-item-context-menu ul {
+    list-style: none;
+    padding: 0.5rem 0;
+    margin: 0;
+}
+
+.story-item-context-menu li {
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.story-item-context-menu li:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    /* ホバー時の背景色 */
+}
+
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.65);
+    /* 半透明の黒背景 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1040;
+    /* ツールチップやメニューより手前 */
+    padding: 1rem;
+    /* スマホでの端の余白 */
+    overflow-y: auto;
+    /* コンテンツが多い場合にスクロール */
+}
+
+.modal-content {
+    background-color: var(--background-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 600px;
+    /* モーダルの最大幅 */
+    max-height: 90vh;
+    /* モーダルの最大高さ */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* 子要素の絶対配置の基準 */
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+}
+
+.modal-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    flex-grow: 1;
+    /* 残りの高さを埋める */
+    overflow-y: auto;
+    /* 内容が多い場合にスクロール */
+    padding-right: 0.5rem;
+    /* スクロールバー用の余白 */
+}
+
+.current-info-audio-container {
+    /* 新しいコンテナ */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* テキストが多い場合も考慮 */
+    background-color: var(--surface-color);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.modal-body .current-info {
+    flex-grow: 1;
+    /* テキスト情報が幅を取るように */
+    padding: 0;
+    /* コンテナ側でパディングするのでリセット */
+    margin-bottom: 0;
+    /* コンテナ側でマージン */
+    background-color: transparent;
+    /* コンテナ側で背景色 */
+}
+
+.modal-audio-player {
+    flex-shrink: 0;
+    /* ボタンが縮まないように */
+    margin-left: 1rem;
+    /* テキスト情報との間隔 */
+    display: flex;
+    align-items: center;
+    /* ボタンを垂直中央に */
+}
+
+.modal-audio-play-btn {
+    /* モーダル内再生ボタンの個別スタイル */
+    width: 38px;
+    /* サイズ調整 */
+    height: 38px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.modal-audio-play-btn:hover {
+    background-color: #4a00b3;
+}
+
+.modal-audio-play-btn .material-icons {
+    font-size: 22px;
+}
+
+.modal-body .current-info h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.modal-body .current-info p {
+    margin: 0.3rem 0;
+    color: var(--text-secondary);
+}
+
+.modal-body .current-info p strong {
+    color: var(--text-primary);
+}
+
+
+.modal-body form div {
+    margin-bottom: 1.2rem;
+}
+
+.modal-body form label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.required-asterisk {
+    /* 必須マーク */
+    color: var(--error-color, red);
+    margin-left: 0.25rem;
+    font-weight: bold;
+}
+
+.contributor-details {
+    margin-bottom: 1.2rem;
+    /* 他のフォーム要素との間隔 */
+}
+
+.contributor-details summary {
+    cursor: pointer;
+    color: var(--primary-color);
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 0.3rem 0;
+    list-style-position: inside;
+    /* マーカーを内側に */
+    outline: none;
+    /* フォーカス時のデフォルトアウトラインを消す場合 */
+}
+
+.contributor-details summary:hover {
+    text-decoration: underline;
+}
+
+.contributor-section-content {
+    /* details内のコンテンツエリア */
+    padding: 1rem;
+    background-color: rgba(var(--primary-rgb, 98, 0, 238), 0.05);
+    /* 薄い背景色、--primary-rgbがなければデフォルト値 */
+    border: 1px solid rgba(var(--primary-rgb, 98, 0, 238), 0.1);
+    border-radius: 5px;
+    margin-top: 0.5rem;
+}
+
+.modal-footer button:disabled {
+    /* 非活性時のスタイル */
+    background-color: var(--disabled-color, #757575);
+    /* --disabled-color を定義するか直接指定 */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.modal-body form input[type="text"],
+.modal-body form select,
+.modal-body form textarea {
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    box-sizing: border-box;
+    /* paddingとborderをwidthに含める */
+}
+
+.modal-body form input[type="text"]:focus,
+.modal-body form select:focus,
+.modal-body form textarea:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+    /* --primary-rgb が定義されている前提 */
+}
+
+.modal-body form textarea {
+    resize: vertical;
+    /* 縦方向のみリサイズ可能 */
+    min-height: 80px;
+}
+
+.modal-body .contributor-info-toggle button {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.5rem 0.8rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-body .contributor-info-toggle button:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.modal-footer {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.modal-footer button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.modal-footer button:hover {
+    background-color: #4a00b3;
+    /* 少し暗いprimary-color */
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 1rem;
+        max-height: 95vh;
+        /* スマホでは高さを少し大きく */
+    }
+
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .modal-body {
+        padding-right: 0;
+        /* スマホではスクロールバー余白不要な場合が多い */
+    }
+}
+
 /* Hide elements when printing */
 @media print {
     body * {
