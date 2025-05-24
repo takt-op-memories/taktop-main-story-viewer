@@ -819,26 +819,41 @@ const StoryPlayer = {
         };
 
         console.log('Modal Submitted Data:', submittedData);
-        // TODO: APIへの送信処理
-        // const endpoint = 'YOUR_ENDPOINT_HERE';
-        // try {
-        //     const response = await fetch(endpoint, {
-        //         method: 'POST',
-        //         headers: { 'Content-Type': 'application/json' },
-        //         body: JSON.stringify(submittedData)
-        //     });
-        //     if (!response.ok) throw new Error(`Submission failed: ${response.statusText}`);
-        //     const result = await response.json();
-        //     console.log('Submission successful:', result);
-        //     alert('Data submitted successfully!');
-        //     this.closeEditModal();
-        //     // this.loadStoryFiles(); // リストを再読み込み
-        // } catch (error) {
-        //     console.error('Submission error:', error);
-        //     alert(`Submission failed: ${error.message}`);
-        // }
-        alert('Data submitted (see console for details). This is a placeholder.');
-        this.closeEditModal();
+        const submitButton = document.getElementById('modal-submit-btn');
+        submitButton.disabled = true;
+        const originalButtonText = submitButton.textContent;
+        submitButton.textContent = langModalTexts?.submitting || 'Submitting...';
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE}/api/v1/story/submit-update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 'X-CSRF-Token': 'your_csrf_token_if_any' // CSRF対策を行う場合
+                },
+                credentials: 'include', // セッションクッキーを送信するために重要
+                body: JSON.stringify(submittedData)
+            });
+
+            const result = await response.json(); // レスポンスはJSON形式を期待
+
+            if (!response.ok) {
+                // バックエンドからのエラーメッセージを表示
+                throw new Error(result.message || `Submission failed: ${response.statusText}`);
+            }
+
+            console.log('Submission successful:', result);
+            alert(result.message || (langModalTexts?.submitSuccess || 'Data submitted successfully and PR created!'));
+            this.closeEditModal();
+            // 必要であればリストを再読み込み (PRマージ後に反映されるため、即時再読み込みは不要かも)
+            // this.loadStoryFiles();
+        } catch (error) {
+            console.error('Submission error:', error);
+            alert(langModalTexts?.submitError || `Submission failed: ${error.message}`);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
     },
 
     playModalAudio(audioSrc) {
