@@ -216,7 +216,7 @@ select:focus {
     display: flex;
     flex-direction: column;
     /* Stack story items vertically */
-    gap: 1rem;
+    /* gap: 1rem; */
 }
 
 .story-item {
@@ -225,37 +225,126 @@ select:focus {
     padding: 1rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.story-item:last-child {
+    margin-bottom: 0;
+}
+
+.story-info {
+    /* New class to wrap file name and text */
+    flex-grow: 1;
+    /* Allows this section to take available space */
+    display: flex;
     flex-direction: column;
-    /* Stack content within item vertically */
-    position: relative;
-    /* For positioning file name */
+    min-width: 0;
+    /* Prevents overflow issues with long text */
 }
 
 .story-file-name {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+    /* Adjusted font size */
     color: var(--text-secondary);
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.3);
+    /* Slightly less opaque */
+    padding: 0.25rem 0.5rem;
+    /* Adjusted padding */
+    border-radius: 4px;
+    /* Consistent border radius */
+    margin-bottom: 0.5rem;
+    /* Space below file name */
+    align-self: flex-start;
+    /* Align to the start of the story-info container */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .story-text {
-    margin-top: 1.5rem;
     /* Space for file name */
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+    /* Removed bottom margin, item padding will handle it */
     font-size: 1rem;
     line-height: 1.5;
+    word-break: break-word;
+    /* Ensure long text wraps */
 }
 
-.story-item audio {
-    width: 100%;
-    margin-top: auto;
-    /* Push audio player to the bottom if text is short */
+.story-controls {
+    /* New class for buttons */
+    display: flex;
+    flex-direction: column;
+    /* Stack buttons vertically */
+    gap: 0.4rem;
+    /* Space between buttons */
+    flex-shrink: 0;
+    /* Prevent controls from shrinking */
 }
 
+.play-btn,
+.download-btn {
+    width: 32px;
+    /* Consistent button size */
+    height: 32px;
+    padding: 0;
+    /* Reset padding, icon will center */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    background-color: var(--primary-color);
+    /* Default background */
+    color: white;
+}
+
+.play-btn:hover {
+    background-color: #7a36ff;
+    /* Darker shade on hover */
+    transform: scale(1.05);
+}
+
+.download-btn {
+    background-color: var(--secondary-color);
+    color: var(--background-color);
+    /* Ensure contrast */
+}
+
+.download-btn:hover {
+    background-color: #00bfa5;
+    /* Darker shade for secondary */
+    transform: scale(1.05);
+}
+
+.play-btn .material-icons,
+.download-btn .material-icons {
+    font-size: 18px;
+    /* Ensure icons are well-sized */
+}
+
+.story-item.playing {
+    /* Style for when an item is playing */
+    border: 2px solid var(--error-color);
+    box-shadow: 0 0 10px rgba(207, 102, 121, 0.3);
+    /* Use error color for playing indication */
+}
+
+.play-btn.playing {
+    /* Style for the play button when it's active (playing) */
+    background-color: var(--error-color);
+}
+
+.play-btn.playing:hover {
+    background-color: #b74c5c;
+    /* Darker error color on hover */
+}
 
 /* Warning and info messages */
 .warnings-container {

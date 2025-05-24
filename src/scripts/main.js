@@ -320,6 +320,8 @@ const StoryPlayer = {
     audioElement: null,
     currentPlayingItem: null,
     storyFiles: [], // To store fetched story file names
+    isPlayingAll: false,
+    progressOverlay: null,
 
     async init() {
         await this.loadSelectors();
@@ -517,42 +519,173 @@ const StoryPlayer = {
     async loadStoryFiles() {
         if (!this.selectedPart || !this.selectedChapter) {
             this.updateRequiredSelectionMessage();
+            this.clearStoryList(); // Ensure list is cleared if selection is incomplete
             return;
         }
 
         const storyList = document.getElementById('story-list');
         storyList.innerHTML = ''; // Clear previous items
 
-        // Fetch files using the new structure. Expects an array of {name: string, title: string}
         this.storyFiles = await this.fetchStoryFiles(this.selectedPart, this.selectedChapter);
 
         if (this.storyFiles.length === 0) {
-            storyList.innerHTML = `<p>${Lang.data[Lang.current].messages.noFiles}</p>`;
+            const noFilesMessage = Lang.data?.[Lang.current]?.messages?.noFiles || 'No files found for this selection.';
+            storyList.innerHTML = `<p class="no-files-message">${noFilesMessage}</p>`;
             return;
         }
 
-        this.storyFiles.forEach(fileData => { // fileData is now an object {name, title}
+        const storyItemsContainer = document.createElement('div');
+        storyItemsContainer.className = 'story-items';
+
+        this.storyFiles.forEach(fileData => {
             const item = document.createElement('div');
             item.className = 'story-item';
 
+            const storyInfo = document.createElement('div');
+            storyInfo.className = 'story-info';
+
             const fileNameDiv = document.createElement('div');
             fileNameDiv.className = 'story-file-name';
-            fileNameDiv.textContent = fileData.title; // Use fileData.title for the filename display
+            fileNameDiv.textContent = fileData.title;
 
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
-            textDiv.textContent = fileData.character_name; // Use fileData.character_name for the story text
+            textDiv.textContent = fileData.character_name || '';
 
-            const audio = new Audio();
-            // Construct the audio source URL using DB_BASE, part, chapter, and fileData.name
-            audio.src = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileData.name}.mp3`; // Added src/mp3/
-            audio.controls = true;
-            audio.preload = 'metadata';
 
-            item.appendChild(fileNameDiv);
-            item.appendChild(textDiv);
-            item.appendChild(audio);
-            storyList.appendChild(item);
+            storyInfo.appendChild(fileNameDiv);
+            storyInfo.appendChild(textDiv);
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'story-controls';
+            controlsDiv.innerHTML = `
+                <button onclick="StoryPlayer.togglePlay('${fileData.name}', this)" class="play-btn">
+                    <span class="material-icons">play_arrow</span>
+                </button>
+                <button onclick="StoryPlayer.downloadStory('${fileData.name}', '${fileData.title}')" class="download-btn">
+                    <span class="material-icons">download</span>
+                </button>
+            `;
+
+            item.appendChild(storyInfo);
+            item.appendChild(controlsDiv);
+            storyItemsContainer.appendChild(item);
         });
+        storyList.appendChild(storyItemsContainer);
+        this.updateRequiredSelectionMessage(); // メッセージを更新
     },
+    setPlayingItem(item) {
+        if (item) {
+            const storyItem = item.closest('.story-item');
+            if (storyItem) storyItem.classList.add('playing');
+        }
+    },
+
+    resetPlayingItem(item) {
+        if (item) {
+            const storyItem = item.closest('.story-item');
+            if (storyItem) storyItem.classList.remove('playing');
+        }
+    },
+
+    async downloadStory(fileName, title) {
+        const password = sessionStorage.getItem(STORAGE_KEY.PASSWORD);
+        if (!password) {
+            Auth.clearAndReload();
+            return;
+        }
+
+        const isValid = await Auth.verify(password);
+        if (!isValid) {
+            Auth.clearAndReload();
+            return;
+        }
+
+        const url = `${CONFIG.DB_BASE}src/wav/${this.selectedPart}/${this.selectedChapter}/${fileName}.wav`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch story: ${response.statusText} (URL: ${url})`);
+            }
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `${title}.wav`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert(Lang.data?.[Lang.current]?.messages?.downloadFailed || 'Download failed. Please check the console for details.');
+        }
+    },
+
+    async togglePlay(fileName, buttonElement) {
+        const password = sessionStorage.getItem(STORAGE_KEY.PASSWORD);
+        if (!password) {
+            Auth.clearAndReload();
+            return;
+        }
+
+        const isValid = await Auth.verify(password);
+        if (!isValid) {
+            Auth.clearAndReload();
+            return;
+        }
+
+        if (this.currentPlayingItem === buttonElement) {
+            this.audioElement?.pause();
+            this.resetPlayButton(buttonElement);
+            this.resetPlayingItem(buttonElement);
+            this.currentPlayingItem = null;
+            return;
+        }
+
+        if (this.currentPlayingItem) {
+            this.audioElement?.pause();
+            this.resetPlayButton(this.currentPlayingItem);
+            this.resetPlayingItem(this.currentPlayingItem);
+        }
+
+        const audioUrl = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileName}.mp3`;
+        this.audioElement = new Audio(audioUrl);
+        this.audioElement.play().catch(error => {
+            console.error('Playback error:', error);
+            alert(Lang.data?.[Lang.current]?.messages?.playbackError || 'Playback error. Please check the console for details.');
+            this.resetPlayButton(buttonElement);
+            this.resetPlayingItem(buttonElement);
+            this.currentPlayingItem = null;
+        });
+
+        this.setPlayingButton(buttonElement);
+        this.setPlayingItem(buttonElement);
+        this.currentPlayingItem = buttonElement;
+
+        this.audioElement.onended = () => {
+            this.resetPlayButton(buttonElement);
+            this.resetPlayingItem(buttonElement);
+            this.currentPlayingItem = null;
+        };
+        this.audioElement.onerror = () => {
+            console.error('Audio error:', this.audioElement.error);
+            alert(Lang.data?.[Lang.current]?.messages?.playbackError || 'Playback error. Please check the console for details.');
+            this.resetPlayButton(buttonElement);
+            this.resetPlayingItem(buttonElement);
+            this.currentPlayingItem = null;
+        };
+    },
+
+    setPlayingButton(button) {
+        const icon = button.querySelector('.material-icons');
+        button.classList.add('playing');
+        if (icon) icon.textContent = 'stop';
+    },
+
+    resetPlayButton(button) {
+        const icon = button.querySelector('.material-icons');
+        button.classList.remove('playing');
+        if (icon) icon.textContent = 'play_arrow';
+    }
 };
