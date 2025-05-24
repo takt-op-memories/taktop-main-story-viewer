@@ -519,7 +519,7 @@ const StoryPlayer = {
     async loadStoryFiles() {
         if (!this.selectedPart || !this.selectedChapter) {
             this.updateRequiredSelectionMessage();
-            this.clearStoryList(); // Ensure list is cleared if selection is incomplete
+            this.clearStoryList();
             return;
         }
 
@@ -534,44 +534,78 @@ const StoryPlayer = {
             return;
         }
 
-        const storyItemsContainer = document.createElement('div');
-        storyItemsContainer.className = 'story-items';
+        // const storyItemsContainer = document.createElement('div'); // story-list が直接アイテムをホールドする場合、これは不要かもしれません
 
         this.storyFiles.forEach(fileData => {
             const item = document.createElement('div');
             item.className = 'story-item';
 
-            const storyInfo = document.createElement('div');
-            storyInfo.className = 'story-info';
+            // 1. Header: File Name and Menu Button
+            const header = document.createElement('div');
+            header.className = 'story-item-header';
 
             const fileNameDiv = document.createElement('div');
             fileNameDiv.className = 'story-file-name';
-            fileNameDiv.textContent = fileData.title;
+            fileNameDiv.textContent = fileData.title; // fileData.title をファイル名として使用
+
+            const menuButton = document.createElement('button');
+            menuButton.className = 'story-item-menu-btn';
+            menuButton.setAttribute('aria-label', Lang.data?.[Lang.current]?.buttons?.menu || 'Menu');
+            menuButton.innerHTML = '<span class="material-icons">more_vert</span>';
+            // menuButton.onclick = () => { /* TODO: Implement menu functionality */ };
+
+            header.appendChild(fileNameDiv);
+            header.appendChild(menuButton);
+
+            // 2. Content: Icon, Dialogue, Controls
+            const content = document.createElement('div');
+            content.className = 'story-item-content';
+
+            // 2.1 Character Icon
+            const characterIconDiv = document.createElement('div');
+            characterIconDiv.className = 'story-character-icon';
+            // data-character-id 属性などを追加して、後で実際のアイコンに置き換えることも可能
+            characterIconDiv.innerHTML = '<span class="material-icons">account_circle</span>'; // デフォルトアイコン (例: account_circle or play_circle_outline)
+
+            // 2.2 Dialogue (Character Name + Text)
+            const dialogueDiv = document.createElement('div');
+            dialogueDiv.className = 'story-dialogue';
+
+            const characterNameDiv = document.createElement('div');
+            characterNameDiv.className = 'story-character-name';
+            characterNameDiv.textContent = fileData.character_name || (Lang.data?.[Lang.current]?.messages?.unknownCharacter || 'Unknown');
 
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
-            textDiv.textContent = fileData.character_name || '';
+            const currentLang = Lang.current || 'en';
+            // text_en や text_jp のようなキーを想定。なければ text をフォールバック
+            textDiv.textContent = fileData[`text_${currentLang}`] || fileData.text || (Lang.data?.[Lang.current]?.messages?.noTextAvailable || 'Text not available.');
 
 
-            storyInfo.appendChild(fileNameDiv);
-            storyInfo.appendChild(textDiv);
+            dialogueDiv.appendChild(characterNameDiv);
+            dialogueDiv.appendChild(textDiv);
 
+            // 2.3 Controls (Play/Download Buttons)
             const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'story-controls';
+            controlsDiv.className = 'story-controls'; // 既存のクラス名を維持
             controlsDiv.innerHTML = `
-                <button onclick="StoryPlayer.togglePlay('${fileData.name}', this)" class="play-btn">
+                <button onclick="StoryPlayer.togglePlay('${fileData.name}', this)" class="play-btn" aria-label="${Lang.data?.[Lang.current]?.buttons?.play || 'Play'}">
                     <span class="material-icons">play_arrow</span>
                 </button>
-                <button onclick="StoryPlayer.downloadStory('${fileData.name}', '${fileData.title}')" class="download-btn">
+                <button onclick="StoryPlayer.downloadStory('${fileData.name}', '${fileData.title}')" class="download-btn" aria-label="${Lang.data?.[Lang.current]?.buttons?.download || 'Download'}">
                     <span class="material-icons">download</span>
                 </button>
             `;
 
-            item.appendChild(storyInfo);
-            item.appendChild(controlsDiv);
-            storyItemsContainer.appendChild(item);
+            content.appendChild(characterIconDiv);
+            content.appendChild(dialogueDiv);
+            content.appendChild(controlsDiv);
+
+            item.appendChild(header);
+            item.appendChild(content);
+            storyList.appendChild(item); // 直接 storyList に item を追加
         });
-        storyList.appendChild(storyItemsContainer);
+        // storyList.appendChild(storyItemsContainer); // storyItemsContainer を使用する場合はこちら
         this.updateRequiredSelectionMessage(); // メッセージを更新
     },
     setPlayingItem(item) {

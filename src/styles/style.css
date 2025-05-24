@@ -222,17 +222,23 @@ select:focus {
 .story-item {
     background-color: var(--surface-color);
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
     margin-bottom: 1rem;
 }
 
 .story-item:last-child {
     margin-bottom: 0;
+}
+
+.story-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 .story-info {
@@ -246,12 +252,12 @@ select:focus {
 }
 
 .story-file-name {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     /* Adjusted font size */
     color: var(--text-secondary);
     background-color: rgba(0, 0, 0, 0.3);
     /* Slightly less opaque */
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.4rem;
     /* Adjusted padding */
     border-radius: 4px;
     /* Consistent border radius */
@@ -265,14 +271,87 @@ select:focus {
     max-width: 100%;
 }
 
+.story-item-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.story-item-menu-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.story-item-menu-btn .material-icons {
+    font-size: 20px;
+}
+
+.story-item-content {
+    display: flex;
+    align-items: center;
+    /* アイコン、セリフ、コントロールを垂直中央揃え */
+    gap: 0.5rem;
+    /* アイコン、セリフ、コントロール間の隙間 */
+    width: 100%;
+}
+
+.story-character-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    /* デフォルトアイコンの背景 */
+    color: var(--text-primary);
+    flex-shrink: 0;
+    /* 縮まないように */
+}
+
+.story-character-icon .material-icons {
+    font-size: 18px;
+    /* アイコンサイズ */
+}
+
+.story-dialogue {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    /* 利用可能な最大の幅を取る */
+    min-width: 0;
+    /* テキストがはみ出ないように */
+    gap: 0.25rem;
+    /* キャラクター名とセリフの間の隙間 */
+}
+
+.story-character-name {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-primary);
+    background-color: var(--primary-color);
+    /* 丸形背景の色 */
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    /* 丸みを帯びた形 */
+    align-self: flex-start;
+    /* 左寄せ */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
 .story-text {
-    /* Space for file name */
-    margin-bottom: 0;
-    /* Removed bottom margin, item padding will handle it */
     font-size: 1rem;
     line-height: 1.5;
+    color: var(--text-secondary);
     word-break: break-word;
-    /* Ensure long text wraps */
 }
 
 .story-controls {
