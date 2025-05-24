@@ -239,6 +239,7 @@ select:focus {
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    gap: 0.5rem;
 }
 
 .story-info {
@@ -269,6 +270,39 @@ select:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    flex-shrink: 1;
+    /* 必要に応じて縮むように */
+    min-width: 50px;
+    /* あまりにも縮みすぎないように */
+}
+
+/* データ不足インジケーターのスタイル */
+.data-missing-indicator {
+    display: flex;
+    align-items: center;
+    background-color: #1e3a8a;
+    /* 蒼系の背景 (例: Tailwind blue-800) */
+    color: #bfdbfe;
+    /* 青系のアイコン・テキスト (例: Tailwind blue-200) */
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    /* 少し丸みを持たせる */
+    font-size: 0.75rem;
+    /* flex-grow: 1; /* 中央に配置したい場合は調整 */
+    margin-left: auto;
+    /* ファイル名の右、メニューボタンの左に配置 */
+    margin-right: 0.5rem;
+    /* メニューボタンとの間隔 */
+    white-space: nowrap;
+    /* テキストが折り返さないように */
+    order: 1;
+    /* 必要であれば表示順を調整 */
+}
+
+.data-missing-icon {
+    font-size: 16px;
+    /* アイコンサイズ調整 */
+    margin-right: 0.3rem;
 }
 
 .story-item-menu-btn {
@@ -281,6 +315,10 @@ select:focus {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    flex-shrink: 0;
+    /* 縮まないように */
+    order: 2;
+    /* 必要であれば表示順を調整 */
 }
 
 .story-item-menu-btn:hover {
@@ -574,6 +612,45 @@ footer .site-name {
         min-width: unset;
         /* Allow full width */
     }
+
+    .data-missing-text {
+        display: none;
+        /* スマホ表示ではテキストを非表示 */
+    }
+
+    .data-missing-icon {
+        margin-right: 0;
+        /* テキストがないのでアイコンの右マージン不要 */
+    }
+
+    .data-missing-indicator {
+        padding: 0.2rem 0.3rem;
+        /* アイコンのみなのでパディング調整 */
+        /* margin-left: 0.5rem; */
+        /* スマホ時の配置調整が必要な場合 */
+    }
+
+    .story-file-name {
+        /* スマホではファイル名が長すぎるとレイアウトが崩れる可能性があるので調整 */
+        /* max-width: calc(100% - 100px); 例: インジケーターとメニューボタンの幅を考慮 */
+    }
+}
+
+.tooltip-message {
+    position: absolute;
+    background-color: #2a2a2e;
+    color: var(--text-primary);
+    padding: 0.6rem 0.9rem;
+    border-radius: 6px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    z-index: 1050;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    max-width: 280px;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+    /* 吹き出しのしっぽ（右下向き）を追加 */
+    /* position: relative; /* しっぽの基準にするため */
 }
 
 /* Hide elements when printing */

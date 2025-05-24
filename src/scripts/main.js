@@ -322,6 +322,9 @@ const StoryPlayer = {
     storyFiles: [], // To store fetched story file names
     isPlayingAll: false,
     progressOverlay: null,
+    activeTooltip: null, // 現在表示中のツールチップ要素
+    lastTooltipTrigger: null, // 最後にツールチップを開いたトリガー要素
+    boundHandleDocumentClick: null, // bindされたドキュメントクリックハンドラ
 
     async init() {
         await this.loadSelectors();
@@ -516,6 +519,93 @@ const StoryPlayer = {
         }
     },
 
+    removeActiveTooltip() {
+        if (this.activeTooltip) {
+            this.activeTooltip.remove();
+            this.activeTooltip = null;
+            if (this.boundHandleDocumentClick) {
+                document.removeEventListener('click', this.boundHandleDocumentClick, true);
+                this.boundHandleDocumentClick = null;
+            }
+            if (this.lastTooltipTrigger) {
+                // this.lastTooltipTrigger.removeAttribute('aria-describedby');
+                this.lastTooltipTrigger = null;
+            }
+        }
+    },
+
+    // ドキュメントクリックでツールチップを閉じるハンドラ
+    // このメソッド内の `this` は StoryPlayer インスタンスに bind される
+    _handleDocumentClickForTooltip(event) {
+        if (this.activeTooltip &&
+            !this.activeTooltip.contains(event.target) && // ツールチップ自身へのクリックではない
+            this.lastTooltipTrigger && !this.lastTooltipTrigger.contains(event.target) // トリガーアイコン(またはその子要素)へのクリックではない
+        ) {
+            this.removeActiveTooltip();
+        }
+    },
+
+    showContributionTooltip(event, message) {
+        event.stopPropagation();
+        const iconElement = event.currentTarget;
+
+        if (this.activeTooltip && this.lastTooltipTrigger === iconElement) {
+            this.removeActiveTooltip();
+            return;
+        }
+
+        this.removeActiveTooltip();
+
+        if (window.innerWidth > 768 && !document.body.classList.contains('force-mobile-tooltip')) {
+            return;
+        }
+
+        this.lastTooltipTrigger = iconElement;
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip-message'; // このクラス名でCSSを適用
+        tooltip.textContent = message;
+
+        document.body.appendChild(tooltip);
+        this.activeTooltip = tooltip;
+
+        const iconRect = iconElement.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect(); // DOMに追加後にサイズ取得
+
+        // --- 位置計算の変更 ---
+        // アイコンの左上に表示するための基準位置
+        let top = iconRect.top + window.scrollY - tooltipRect.height - 8; // アイコンの上端からツールチップの高さ分上に、さらに8pxオフセット
+        let left = iconRect.left + window.scrollX - tooltipRect.width - 8; // アイコンの左端からツールチップの幅分左に、さらに8pxオフセット
+
+        // 画面境界チェック (左上表示に特化)
+        const viewportWidth = window.innerWidth;
+        const minOffset = 5; // 画面端からの最小マージン
+
+        // 左端チェック: 画面左端よりはみ出ないように
+        if (left < minOffset) {
+            left = minOffset;
+        }
+
+        // 上端チェック: 画面上端よりはみ出ないように
+        if (top < window.scrollY + minOffset) {
+            top = window.scrollY + minOffset;
+        }
+
+        // 右端チェック (左に配置した結果、右にはみ出ることは少ないが念のため)
+        if (left + tooltipRect.width > viewportWidth - minOffset) {
+            left = viewportWidth - tooltipRect.width - minOffset;
+        }
+        // --- 位置計算の変更ここまで ---
+
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.opacity = '1';
+
+        this.boundHandleDocumentClick = this._handleDocumentClickForTooltip.bind(this);
+        document.addEventListener('click', this.boundHandleDocumentClick, true);
+    },
+
     async loadStoryFiles() {
         if (!this.selectedPart || !this.selectedChapter) {
             this.updateRequiredSelectionMessage();
@@ -534,65 +624,128 @@ const StoryPlayer = {
             return;
         }
 
-        // const storyItemsContainer = document.createElement('div'); // story-list が直接アイテムをホールドする場合、これは不要かもしれません
-
         this.storyFiles.forEach(fileData => {
             const item = document.createElement('div');
             item.className = 'story-item';
 
-            // 1. Header: File Name and Menu Button
             const header = document.createElement('div');
             header.className = 'story-item-header';
 
             const fileNameDiv = document.createElement('div');
             fileNameDiv.className = 'story-file-name';
-            fileNameDiv.textContent = fileData.title; // fileData.title をファイル名として使用
+            fileNameDiv.textContent = fileData.title;
+            header.appendChild(fileNameDiv); // fileNameDiv を先に追加
+
+            // --- データ不足インジケーターのロジック ---
+            const currentLang = Lang.current || 'en';
+            const langMessages = Lang.data?.[currentLang]?.messages;
+            let showDataMissingIndicator = false;
+            let contributionMessage = ''; // ツールチップとテキスト表示用のメッセージを保持
+
+            if ((currentLang === 'ja' || currentLang === 'en') && langMessages) {
+                let characterName = '';
+                let storyText = '';
+
+                // 現在の言語に応じてキャラクター名とテキストを取得
+                if (currentLang === 'ja') {
+                    characterName = fileData.character_name || '';
+                    storyText = fileData.text || '';
+                } else { // en およびその他の言語 (フォールバックとして英語キーを優先)
+                    characterName = fileData.character_enName || fileData.character_name || '';
+                    storyText = fileData.text_en || fileData.text || '';
+                }
+
+                // 判定用の文字列を言語データから取得 (存在しない場合はマッチしない文字列を設定)
+                const unknownCharStr = langMessages.unknownCharacter || '###NEVER_MATCH_CHAR###';
+                const undefinedTextStr = langMessages.undefinedText || '###NEVER_MATCH_TEXT###';
+
+                // キャラクター名とテキストが「不明」「未定義」であるかを判定 (小文字化して比較)
+                const isCharacterUnknown = characterName.toLowerCase() === unknownCharStr.toLowerCase();
+                const isTextUndefined = storyText.toLowerCase() === undefinedTextStr.toLowerCase();
+
+                if (isCharacterUnknown && isTextUndefined) {
+                    showDataMissingIndicator = true;
+                    // 表示/ツールチップ用のメッセージを言語データから取得
+                    contributionMessage = langMessages.dataContributionRequest || '';
+                }
+            }
+
+            if (showDataMissingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.className = 'data-missing-indicator';
+
+                const icon = document.createElement('span');
+                icon.className = 'material-icons data-missing-icon';
+                icon.textContent = 'info';
+                // icon.tabIndex = 0; // 必要に応じてキーボードフォーカス可能に
+                // icon.setAttribute('role', 'button'); // 役割を明確に
+                icon.setAttribute('aria-label', contributionMessage); // スクリーンリーダー用ラベル
+
+                // アイコンクリック時にツールチップ表示関数を呼び出す (thisをStoryPlayerに束縛)
+                icon.addEventListener('click', (e) => this.showContributionTooltip(e, contributionMessage));
+
+                indicator.appendChild(icon);
+
+                const text = document.createElement('span');
+                text.className = 'data-missing-text'; // CSSでスマホ時に非表示
+                text.textContent = contributionMessage;
+                indicator.appendChild(text);
+
+                header.appendChild(indicator); // 3点ボタンの前、ファイル名の後に挿入
+            }
+            // --- データ不足インジケーターのロジックここまで ---
 
             const menuButton = document.createElement('button');
             menuButton.className = 'story-item-menu-btn';
-            menuButton.setAttribute('aria-label', Lang.data?.[Lang.current]?.buttons?.menu || 'Menu');
+            menuButton.setAttribute('aria-label', Lang.data?.[currentLang]?.buttons?.menu || 'Menu');
             menuButton.innerHTML = '<span class="material-icons">more_vert</span>';
             // menuButton.onclick = () => { /* TODO: Implement menu functionality */ };
+            header.appendChild(menuButton); // 最後にメニューボタンを追加
 
-            header.appendChild(fileNameDiv);
-            header.appendChild(menuButton);
-
-            // 2. Content: Icon, Dialogue, Controls
             const content = document.createElement('div');
             content.className = 'story-item-content';
 
-            // 2.1 Character Icon
             const characterIconDiv = document.createElement('div');
             characterIconDiv.className = 'story-character-icon';
-            // data-character-id 属性などを追加して、後で実際のアイコンに置き換えることも可能
-            characterIconDiv.innerHTML = '<span class="material-icons">account_circle</span>'; // デフォルトアイコン (例: account_circle or play_circle_outline)
+            characterIconDiv.innerHTML = '<span class="material-icons">account_circle</span>';
 
-            // 2.2 Dialogue (Character Name + Text)
             const dialogueDiv = document.createElement('div');
             dialogueDiv.className = 'story-dialogue';
 
             const characterNameDiv = document.createElement('div');
             characterNameDiv.className = 'story-character-name';
-            characterNameDiv.textContent = fileData.character_name || (Lang.data?.[Lang.current]?.messages?.unknownCharacter || 'Unknown');
+            let displayName = '';
+            // 表示用のキャラクター名を設定 (不明な場合は言語データから取得)
+            if (currentLang === 'ja') {
+                displayName = fileData.character_name || (langMessages?.unknownCharacter || '不明なキャラクター');
+            } else {
+                displayName = fileData.character_enName || fileData.character_name || (langMessages?.unknownCharacter || 'Unknown Character');
+            }
+            characterNameDiv.textContent = displayName;
+
 
             const textDiv = document.createElement('div');
             textDiv.className = 'story-text';
-            const currentLang = Lang.current || 'en';
-            // text_en や text_jp のようなキーを想定。なければ text をフォールバック
-            textDiv.textContent = fileData[`text_${currentLang}`] || fileData.text || (Lang.data?.[Lang.current]?.messages?.noTextAvailable || 'Text not available.');
+            let displayText = '';
+            // 表示用のテキストを設定 (未定義の場合は言語データから取得)
+            if (currentLang === 'ja') {
+                displayText = fileData.text || (langMessages?.undefinedText || '未定義');
+            } else {
+                displayText = fileData.text_en || fileData.text || (langMessages?.undefinedText || 'undefined');
+            }
+            textDiv.textContent = displayText;
 
 
             dialogueDiv.appendChild(characterNameDiv);
             dialogueDiv.appendChild(textDiv);
 
-            // 2.3 Controls (Play/Download Buttons)
             const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'story-controls'; // 既存のクラス名を維持
+            controlsDiv.className = 'story-controls';
             controlsDiv.innerHTML = `
-                <button onclick="StoryPlayer.togglePlay('${fileData.name}', this)" class="play-btn" aria-label="${Lang.data?.[Lang.current]?.buttons?.play || 'Play'}">
+                <button onclick="StoryPlayer.togglePlay('${fileData.name}', this)" class="play-btn" aria-label="${Lang.data?.[currentLang]?.buttons?.play || 'Play'}">
                     <span class="material-icons">play_arrow</span>
                 </button>
-                <button onclick="StoryPlayer.downloadStory('${fileData.name}', '${fileData.title}')" class="download-btn" aria-label="${Lang.data?.[Lang.current]?.buttons?.download || 'Download'}">
+                <button onclick="StoryPlayer.downloadStory('${fileData.name}', '${fileData.title}')" class="download-btn" aria-label="${Lang.data?.[currentLang]?.buttons?.download || 'Download'}">
                     <span class="material-icons">download</span>
                 </button>
             `;
@@ -603,9 +756,8 @@ const StoryPlayer = {
 
             item.appendChild(header);
             item.appendChild(content);
-            storyList.appendChild(item); // 直接 storyList に item を追加
+            storyList.appendChild(item);
         });
-        // storyList.appendChild(storyItemsContainer); // storyItemsContainer を使用する場合はこちら
         this.updateRequiredSelectionMessage(); // メッセージを更新
     },
     setPlayingItem(item) {

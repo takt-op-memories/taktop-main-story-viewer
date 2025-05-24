@@ -23,7 +23,10 @@
         },
         "messages": {
             "requiredSelection": "ストーリーを表示するには、パートとチャプターの両方を選択してください。",
-            "noFiles": "このチャプターには表示できるファイルがありません。"
+            "noFiles": "このチャプターには表示できるファイルがありません。",
+            "unknownCharacter": "不明なキャラクター",
+            "undefinedText": "未定義",
+            "dataContributionRequest": "データの追加にご協力ください"
         }
     },
     "en": {
@@ -50,7 +53,10 @@
         },
         "messages": {
             "requiredSelection": "Please select both Part and Chapter to view stories.",
-            "noFiles": "No files available for this chapter."
+            "noFiles": "No files available for this chapter.",
+            "unknownCharacter": "Unknown Character",
+            "undefinedText": "undefined",
+            "dataContributionRequest": "Please help add data."
         }
     }
 }
