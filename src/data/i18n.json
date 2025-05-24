@@ -27,7 +27,7 @@
             "unknownCharacter": "不明なキャラクター",
             "undefinedText": "未定義",
             "dataContributionRequest": "データの追加にご協力ください",
-            "success_pr_created": "「{{part}}/{{chapter}}/{{file}}」の更新提案PRが作成されました！ {{prUrl}}"
+            "success_pr_created": "「{{part}}/{{chapter}}/{{file}}」の更新提案が作成されました！"
         },
         "menu": {
             "editData": "データの修正",
@@ -51,7 +51,7 @@
             "textIsStillUndefined": "テキストが「未定義」のままです。有効なテキストを入力してください。",
             "validationError": "必須項目（キャラクター、言語、テキスト）を全て入力してください。",
             "submitting": "送信中...",
-            "submitSuccess": "データが正常に送信され、PRが作成されました！",
+            "submitSuccess": "データが正常に送信され、更新提案が作成されました！",
             "submitError": "送信に失敗しました: {{message}}",
             "submitErrorGeneric": "予期せぬエラーが発生しました。",
             "characterNotFoundError": "エラー：選択されたキャラクターデータが見つかりません。キャラクターを選択してください。"
@@ -59,7 +59,7 @@
         "errorMessages": {
             "error_missing_language": "言語が指定されていないか無効です (ファイル: {{file}})。テキストを更新できません。",
             "error_processing_update": "更新処理中にエラーが発生しました (ファイル: {{file}}, 詳細: {{error}})。",
-            "error_pr_already_exists": "このアイテムの更新は既に進行中です。PRが処理されるまでお待ちください: {{prUrl}}"
+            "error_pr_already_exists": "このアイテムの更新は既に進行中です。処理されるまでお待ちください"
         }
     },
     "en": {
@@ -90,7 +90,7 @@
             "unknownCharacter": "Unknown Character",
             "undefinedText": "undefined",
             "dataContributionRequest": "Please help add data.",
-            "success_pr_created": "PR created for '{{part}}/{{chapter}}/{{file}}'! {{prUrl}}"
+            "success_pr_created": "Update proposal for '{{part}}/{{chapter}}/{{file}}' has been created!"
         },
         "menu": {
             "editData": "Edit Data",
@@ -114,7 +114,7 @@
             "textIsStillUndefined": "The text field cannot be 'undefined'. Please enter valid text.",
             "validationError": "Please fill in all required fields (Character, Language, Text).",
             "submitting": "Submitting...",
-            "submitSuccess": "Data submitted successfully and PR created!",
+            "submitSuccess": "Data submitted successfully and update proposal created!",
             "submitError": "Submission failed: {{message}}",
             "submitErrorGeneric": "An unexpected error occurred.",
             "characterNotFoundError": "Error: Selected character data is missing. Please select a character."
@@ -122,7 +122,7 @@
         "errorMessages": {
             "error_missing_language": "Language is missing or invalid (File: {{file}}). Cannot update text.",
             "error_processing_update": "An error occurred while processing the update (File: {{file}}, Details: {{error}}).",
-            "error_pr_already_exists": "An update for this item is already in progress. Please wait for PR to be processed: {{prUrl}}"
+            "error_pr_already_exists": "An update for this item is already in progress. Please wait until it is processed."
         }
     }
 }
