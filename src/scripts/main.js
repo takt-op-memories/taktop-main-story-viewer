@@ -794,7 +794,6 @@ const StoryPlayer = {
 
         if (!this.validateModalForm()) { // validateModalForm を再利用
             let alertMessage = langModalTexts?.validationError || 'Please fill in all required fields (Character, Language, Text).';
-            // テキストフィールドが問題の場合、より具体的なメッセージも検討
             const textInputValue = document.getElementById('modal-text')?.value.trim().toLowerCase();
             const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase();
             if (textInputValue === undefinedTextStr) {
@@ -805,36 +804,50 @@ const StoryPlayer = {
         }
 
         const form = document.getElementById('edit-form');
-        if (!form || !this.editingItemData) return;
-
-        const formData = new FormData(form);
-
-        const selectedCharacter = this.characters.find(c => c.id === this.state.selectedCharacterId); // 仮のキャラクター取得方法
-        if (!selectedCharacter) {
-            console.error('Selected character not found');
-            // エラー表示などの処理
+        if (!form || !this.editingItemData) {
+            console.error('Form or editingItemData is missing.');
             return;
         }
 
+        // フォーム要素から直接値を取得
+        const selectedCharacterIdFromForm = document.getElementById('modal-character').value;
+        const selectedLanguageFromForm = document.getElementById('modal-language').value;
+        const editedTextFromForm = document.getElementById('modal-text').value;
+        const contributorNameFromForm = document.getElementById('modal-contributor').value;
+
+        console.log('Selected Character ID from form:', selectedCharacterIdFromForm);
+        // this.availableCharacters を使用してキャラクターオブジェクトを検索
+        const selectedCharacter = this.availableCharacters.find(c => c.id === selectedCharacterIdFromForm);
+
+        if (!selectedCharacter) {
+            console.error('Selected character not found from form ID. Cannot proceed with submission.');
+            alert(langModalTexts?.characterNotFoundError || 'Error: Selected character data is missing. Please select a character.');
+            return;
+        }
+        console.log('Found selectedCharacter from form:', JSON.stringify(selectedCharacter, null, 2));
+
+        // 正しいキャラクター名の構造 (selectedCharacter.name.ja, selectedCharacter.name.en) を使用
+        const characterNamesPayload = {
+            ja: selectedCharacter.name.ja,
+            en: selectedCharacter.name.en,
+            // 他の言語も必要に応じて追加
+        };
+        console.log('Constructed characterNamesPayload:', JSON.stringify(characterNamesPayload, null, 2));
+
+
+        // editingItemData と StoryPlayer のプロパティから他の情報を取得
         const submittedData = {
-            originalFile: this.state.editingItem.originalFile,
-            part: this.state.editingItem.part,
-            chapter: this.state.editingItem.chapter,
-            // characterId: this.state.selectedCharacterId, // ← 削除
-            characterNames: { // 各言語のキャラクター名を渡す (実際のプロパティ名に合わせてください)
-                ja: selectedCharacter.name_ja, // 例: 日本語名
-                en: selectedCharacter.name_en, // 例: 英語名
-                // ko: selectedCharacter.name_ko, // 例: 韓国語名
-                // 'zh-CN': selectedCharacter.name_zh_cn, // 例: 中国語(簡体)名
-                // 'zh-TW': selectedCharacter.name_zh_tw, // 例: 中国語(繁体)名
-                // 他に必要な言語があれば追加
-            },
-            language: this.state.selectedLanguage,
-            text: this.state.editedText,
-            contributor: this.state.contributorName || null, // 既存のまま
+            originalFile: this.editingItemData.name, // voice.json の "name" プロパティ (例: Voice_story001_001)
+            part: this.selectedPart,
+            chapter: this.selectedChapter,
+            characterNames: characterNamesPayload,
+            language: selectedLanguageFromForm,
+            text: editedTextFromForm,
+            contributor: contributorNameFromForm || null,
         };
 
-        console.log('Modal Submitted Data:', submittedData);
+        console.log('Data being submitted to backend (final):', JSON.stringify(submittedData, null, 2));
+
         const submitButton = document.getElementById('modal-submit-btn');
         submitButton.disabled = true;
         const originalButtonText = submitButton.textContent;
@@ -845,24 +858,20 @@ const StoryPlayer = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'X-CSRF-Token': 'your_csrf_token_if_any' // CSRF対策を行う場合
                 },
-                credentials: 'include', // セッションクッキーを送信するために重要
+                credentials: 'include',
                 body: JSON.stringify(submittedData)
             });
 
-            const result = await response.json(); // レスポンスはJSON形式を期待
+            const result = await response.json();
 
             if (!response.ok) {
-                // バックエンドからのエラーメッセージを表示
                 throw new Error(result.message || `Submission failed: ${response.statusText}`);
             }
 
             console.log('Submission successful:', result);
             alert(result.message || (langModalTexts?.submitSuccess || 'Data submitted successfully and PR created!'));
             this.closeEditModal();
-            // 必要であればリストを再読み込み (PRマージ後に反映されるため、即時再読み込みは不要かも)
-            // this.loadStoryFiles();
         } catch (error) {
             console.error('Submission error:', error);
             alert(langModalTexts?.submitError || `Submission failed: ${error.message}`);
