@@ -19,9 +19,7 @@
         },
         "selectors": {
             "part": "パートを選択",
-            "chapter": "チャプターを選択",
-            "toggleShow": "選択項目を表示",
-            "toggleHide": "選択項目を隠す"
+            "chapter": "チャプターを選択"
         },
         "messages": {
             "requiredSelection": "ストーリーを表示するには、パートとチャプターの両方を選択してください。",
@@ -48,9 +46,7 @@
         },
         "selectors": {
             "part": "Select Part",
-            "chapter": "Select Chapter",
-            "toggleShow": "Show Selection Items",
-            "toggleHide": "Hide Selection Items"
+            "chapter": "Select Chapter"
         },
         "messages": {
             "requiredSelection": "Please select both Part and Chapter to view stories.",
