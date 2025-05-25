@@ -123,12 +123,23 @@ const Lang = {
         if (warningDiv) {
             warningDiv.textContent = strings.warning;
         }
-        document.querySelector('#auth-container h2').textContent = strings.auth.title;
-        document.querySelector('#password').placeholder = strings.auth.placeholder;
-        document.querySelector('#auth-error').textContent = strings.auth.error;
-        document.querySelector('#auth-form button').textContent = strings.auth.submit;
-        document.querySelector('footer div').textContent = strings.footer.disclaimer;
-        document.querySelector('.page-title h2').textContent = strings.pageTitle;
+        const authTitle = document.querySelector('#auth-container h2');
+        if (authTitle) authTitle.textContent = strings.auth.title;
+
+        const passwordInput = document.querySelector('#password');
+        if (passwordInput) passwordInput.placeholder = strings.auth.placeholder;
+
+        const authError = document.querySelector('#auth-error');
+        if (authError) authError.textContent = strings.auth.error;
+
+        const authButton = document.querySelector('#auth-form button');
+        if (authButton) authButton.textContent = strings.auth.submit;
+
+        const footerDisclaimer = document.querySelector('footer div');
+        if (footerDisclaimer) footerDisclaimer.textContent = strings.footer.disclaimer;
+
+        const pageTitle = document.querySelector('.page-title h2');
+        if (pageTitle) pageTitle.textContent = strings.pageTitle;
 
 
         const partSelect = document.getElementById('part-select');
