@@ -30,7 +30,8 @@
             "success_pr_created": "「{{part}}/{{chapter}}/{{file}}」の更新提案が作成されました！",
             "noFilesToDownload": "ダウンロードできるファイルがありませんでした。",
             "resumePlayAll": "前回再生した「{{TITLE}}」の続きから再生しますか？",
-            "defaultResumeTitle": "続き"
+            "defaultResumeTitle": "続き",
+            "dataReflectionNotice": "データは通常1日以内に反映されます。"
         },
         "menu": {
             "editData": "データの修正",
@@ -107,7 +108,8 @@
             "success_pr_created": "Update proposal for '{{part}}/{{chapter}}/{{file}}' has been created!",
             "noFilesToDownload": "No files could be prepared for download.",
             "resumePlayAll": "Resume playing from \"{{TITLE}}\" where you left off?",
-            "defaultResumeTitle": "the last point"
+            "defaultResumeTitle": "the last point",
+            "dataReflectionNotice": "Data is usually reflected within 1 day."
         },
         "menu": {
             "editData": "Edit Data",

@@ -1092,7 +1092,8 @@ const StoryPlayer = {
             } else { // 究極のフォールバック
                 successMessage = (langModalTexts?.submitSuccess || 'Data submitted successfully and PR created!');
             }
-            alert(successMessage);
+            const reflectionNotice = langMessages?.dataReflectionNotice || 'データは通常1日以内に反映されます。';
+            alert(`${successMessage}\n\n${reflectionNotice}`);
             // ▲▲▲ ここまで ▲▲▲
             this.closeEditModal();
         } catch (error) {
