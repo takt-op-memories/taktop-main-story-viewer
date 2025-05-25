@@ -1119,6 +1119,31 @@ const StoryPlayer = {
         const modalBody = document.createElement('div');
         modalBody.className = 'modal-body';
 
+        // Part 1 編集時の注意書き
+        if (this.selectedPart === 'part1' && langModalTexts) {
+            const part1WarningDiv = document.createElement('div');
+            part1WarningDiv.className = 'part1-edit-warning'; // CSSでスタイル調整用
+
+            const warningText = langModalTexts.part1Warning || (currentLang === 'ja' ? 'Part 1のデータを追加・編集する際は、以下の公式動画を参考にしてください。' : 'When adding or editing data for Part 1, please refer to the videos below.');
+
+            let playlistLinkHTML = '';
+            if (currentLang === 'ja') {
+                const linkTextJa = langModalTexts.part1LinkTextJa || '日本語版再生リスト';
+                playlistLinkHTML = `<li><a href="https://www.youtube.com/playlist?list=PLBLKp5zqWm-vYdfEmj5WM_HWJrx9am4kj" target="_blank" rel="noopener noreferrer">${linkTextJa}</a></li>`;
+            } else if (currentLang === 'en') {
+                const linkTextEn = langModalTexts.part1LinkTextEn || 'English Playlist';
+                playlistLinkHTML = `<li><a href="https://www.youtube.com/playlist?list=PL-LgJ5nZgKx3Gvcfj2_h8X6fw3dirFdMm" target="_blank" rel="noopener noreferrer">${linkTextEn}</a></li>`;
+            }
+
+            part1WarningDiv.innerHTML = `
+                <p>${warningText}</p>
+                <ul>
+                    ${playlistLinkHTML}
+                </ul>
+            `;
+            modalBody.appendChild(part1WarningDiv);
+        }
+
         // Current Info & Audio Player
         const currentInfoDiv = document.createElement('div');
         currentInfoDiv.className = 'current-info-audio-container';

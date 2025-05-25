@@ -1,14 +1,17 @@
 /* Base styles */
 :root {
     --primary-color: #6200ee;
+    --primary-rgb: 98, 0, 238;
     --secondary-color: #03dac6;
     --background-color: #121212;
     --surface-color: #1e1e1e;
     --error-color: #cf6679;
     --warning-color: #efb233;
+    --warning-rgb: 239, 178, 51;
     --text-primary: rgba(255, 255, 255, 0.87);
     --text-secondary: rgba(255, 255, 255, 0.6);
     --border-color: rgba(255, 255, 255, 0.2);
+    --disabled-color: #757575;
 }
 
 * {
@@ -726,6 +729,50 @@ footer .site-name {
     /* スマホでの端の余白 */
     overflow-y: auto;
     /* コンテンツが多い場合にスクロール */
+}
+
+/* Part 1 Edit Warning in Modal */
+.part1-edit-warning {
+    background-color: rgba(var(--warning-rgb, 239, 178, 51), 0.1);
+    border: 1px solid var(--warning-color, #efb233);
+    border-left: 4px solid var(--warning-color, #efb233);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    color: var(--text-secondary);
+}
+
+.part1-edit-warning p {
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.part1-edit-warning ul {
+    list-style-position: inside;
+    padding-left: 0;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    /* Ensure no extra bottom margin for the list itself */
+}
+
+.part1-edit-warning li {
+    margin-bottom: 0.25rem;
+}
+
+.part1-edit-warning li:last-child {
+    margin-bottom: 0;
+    /* Remove bottom margin from the last list item */
+}
+
+.part1-edit-warning a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    /* Make links slightly bolder */
+}
+
+.part1-edit-warning a:hover {
+    text-decoration: underline;
 }
 
 .modal-content {
