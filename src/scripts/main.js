@@ -449,20 +449,28 @@ const StoryPlayer = {
 
     async loadSelectors() {
         const params = new URLSearchParams(window.location.search);
-        this.selectedPart = params.get('part') || '';
-        this.selectedChapter = params.get('chapter') || '';
+        const initialPartFromUrl = params.get('part') || '';
+        const initialChapterFromUrl = params.get('chapter') || '';
 
         const partSelector = document.createElement('select');
         partSelector.id = 'part-select';
         const partLabel = document.createElement('div');
         partLabel.className = 'selector-label';
-        document.querySelector('.element-selector:nth-child(1) div').append(partLabel, partSelector);
+        const partContainer = document.querySelector('.element-selector:nth-child(1) div');
+        if (partContainer) {
+            partContainer.append(partLabel, partSelector);
+        }
+
 
         const chapterSelector = document.createElement('select');
         chapterSelector.id = 'chapter-select';
         const chapterLabel = document.createElement('div');
         chapterLabel.className = 'selector-label';
-        document.querySelector('.element-selector:nth-child(2) div').append(chapterLabel, chapterSelector);
+        const chapterContainer = document.querySelector('.element-selector:nth-child(2) div');
+        if (chapterContainer) {
+            chapterContainer.append(chapterLabel, chapterSelector);
+        }
+
 
         // Populate Part Selector
         const partSelectText = Lang.data[Lang.current].selectors.part;
@@ -477,14 +485,35 @@ const StoryPlayer = {
         chapterSelector.innerHTML = `<option value="">${chapterSelectText}</option>`;
         document.querySelector('.element-selector:nth-child(2)').style.display = 'block'; // Always show chapter
 
-        if (this.selectedPart) {
-            partSelector.value = this.selectedPart;
-            await this.onPartChange({ target: partSelector });
-            if (this.selectedChapter) {
-                chapterSelector.value = this.selectedChapter;
-                await this.onChapterChange({ target: chapterSelector });
+        if (initialPartFromUrl) {
+            partSelector.value = initialPartFromUrl;
+            this.selectedPart = initialPartFromUrl; // Update StoryPlayer's state before calling onPartChange
+            await this.onPartChange({ target: partSelector }); // This will populate chapters and reset this.selectedChapter
+
+            // After onPartChange, chapters are populated. Now set the chapter if it was in the URL.
+            if (initialChapterFromUrl) {
+                // Check if the chapter from URL exists as an option in the populated chapterSelector
+                const chapterOptionExists = Array.from(chapterSelector.options).some(opt => opt.value === initialChapterFromUrl);
+                if (chapterOptionExists) {
+                    chapterSelector.value = initialChapterFromUrl;
+                    this.selectedChapter = initialChapterFromUrl; // Update StoryPlayer's state
+                    // Call onChapterChange to trigger loading story files and other related actions
+                    await this.onChapterChange({ target: chapterSelector });
+                } else {
+                    // If the chapter from URL is not valid for the selected part,
+                    // ensure selectedChapter is empty and selector is reset.
+                    this.selectedChapter = ''; // This should already be the case due to onPartChange
+                    chapterSelector.value = ''; // Ensure dropdown is also reset
+                    // Update URL to remove invalid chapter parameter if necessary
+                    this.updateURLParams();
+                }
             }
+        } else {
+            // No part in URL, ensure selections are cleared (they should be default empty)
+            this.selectedPart = '';
+            this.selectedChapter = '';
         }
+
         this.updateSelectorLabels();
         this.updateRequiredSelectionMessage();
     },
