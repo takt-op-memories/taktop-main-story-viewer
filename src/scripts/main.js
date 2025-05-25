@@ -887,6 +887,21 @@ const StoryPlayer = {
         const langMessages = Lang.data?.[currentLangUI]?.messages;
         const langErrorMessages = Lang.data?.[currentLangUI]?.errorMessages;
 
+        // --- ここから追加 ---
+        const password = sessionStorage.getItem(STORAGE_KEY.PASSWORD);
+        if (!password) {
+            alert(langErrorMessages?.authenticationRequired || 'Authentication is required. Please log in again.');
+            Auth.clearAndReload();
+            return;
+        }
+        const isStillAuthenticated = await Auth.verify(password);
+        if (!isStillAuthenticated) {
+            alert(langErrorMessages?.sessionExpired || 'Your session has expired. Please log in again.');
+            Auth.clearAndReload();
+            return;
+        }
+        // --- ここまで追加 ---
+
 
         const validationResult = this.validateModalForm();
 
