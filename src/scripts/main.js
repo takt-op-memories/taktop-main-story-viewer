@@ -319,6 +319,7 @@ const StoryPlayer = {
     selectedPart: null,
     selectedChapter: null,
     audioElement: null, // モーダル内再生用にも使用
+    modalAudioElement: null, // モーダル専用のオーディオ要素
     currentPlayingItem: null, // メインリストの再生状態
     storyFiles: [], // To store fetched story file names
     isPlayingAll: false,
@@ -804,10 +805,10 @@ const StoryPlayer = {
             this.activeModal = null;
             this.editingItemData = null;
             this.initialModalData = null; // 初期データもクリア
-            if (this.audioElement && !this.audioElement.paused) { // モーダルを閉じるときに音声停止
-                this.audioElement.pause();
-                // 必要であればメインリストの再生ボタン状態もリセット
+            if (this.modalAudioElement && !this.modalAudioElement.paused) { // モーダル専用オーディオをチェック
+                this.modalAudioElement.pause();
             }
+            this.modalAudioElement = null; // モーダル専用オーディオをクリア
         }
     },
 
@@ -1021,54 +1022,88 @@ const StoryPlayer = {
     },
 
     playModalAudio(audioSrc, buttonElement) { // buttonElement を引数に追加
-        if (this.audioElement) {
-            this.audioElement.pause();
+        if (this.modalAudioElement) { // モーダル専用オーディオを操作
+            this.modalAudioElement.pause();
         }
-        this.audioElement = new Audio(audioSrc);
+        this.modalAudioElement = new Audio(audioSrc); // モーダル専用オーディオに代入
         const playIcon = buttonElement ? buttonElement.querySelector('.material-icons') : null;
 
-        this.audioElement.play()
+        // 他の再生中のオーディオ（メインリストなど）があれば停止
+        if (this.audioElement && !this.audioElement.paused && this.audioElement !== this.modalAudioElement) {
+            this.audioElement.pause();
+            if (this.currentPlayingItem) {
+                this.resetPlayButton(this.currentPlayingItem);
+                this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
+                this.currentPlayingItem = null;
+            }
+        }
+        // もし「すべて再生」中なら停止
+        if (this.isPlayingAll) {
+            this.stopPlayAll();
+        }
+
+        this.modalAudioElement.play()
             .then(() => {
                 if (playIcon) playIcon.textContent = 'stop';
+                if (buttonElement) buttonElement.classList.add('playing'); // 再生中クラス追加
             })
             .catch(error => {
                 console.error('Modal audio playback error:', error);
                 if (playIcon) playIcon.textContent = 'play_arrow';
+                if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
             });
 
-        this.audioElement.onended = () => {
+        this.modalAudioElement.onended = () => {
             if (playIcon) playIcon.textContent = 'play_arrow';
+            if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
         };
-        this.audioElement.onerror = () => {
+        this.modalAudioElement.onerror = () => {
             if (playIcon) playIcon.textContent = 'play_arrow';
+            if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
             console.error('Modal audio error event');
         };
     },
 
     toggleModalAudio(buttonElement, audioSrc) {
         const playIcon = buttonElement.querySelector('.material-icons');
-        const currentAudioFileName = this.audioElement ? this.audioElement.src.substring(this.audioElement.src.lastIndexOf('/') + 1) : null;
+        const currentAudioFileName = this.modalAudioElement ? this.modalAudioElement.src.substring(this.modalAudioElement.src.lastIndexOf('/') + 1) : null;
         const newAudioFileName = audioSrc.substring(audioSrc.lastIndexOf('/') + 1);
 
-        if (this.audioElement && currentAudioFileName === newAudioFileName) {
+        if (this.modalAudioElement && currentAudioFileName === newAudioFileName) {
             // 同じ音源に対する操作
-            if (!this.audioElement.paused) {
+            if (!this.modalAudioElement.paused) {
                 // 再生中なので停止
-                this.audioElement.pause();
+                this.modalAudioElement.pause();
                 if (playIcon) playIcon.textContent = 'play_arrow';
+                if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
             } else {
                 // 停止中なので再生
-                this.audioElement.play()
+                // 他の再生中のオーディオ（メインリストなど）があれば停止
+                if (this.audioElement && !this.audioElement.paused && this.audioElement !== this.modalAudioElement) {
+                    this.audioElement.pause();
+                    if (this.currentPlayingItem) {
+                        this.resetPlayButton(this.currentPlayingItem);
+                        this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
+                        this.currentPlayingItem = null;
+                    }
+                }
+                if (this.isPlayingAll) {
+                    this.stopPlayAll();
+                }
+
+                this.modalAudioElement.play()
                     .then(() => {
                         if (playIcon) playIcon.textContent = 'stop';
+                        if (buttonElement) buttonElement.classList.add('playing'); // 再生中クラス追加
                     })
                     .catch(error => {
                         console.error('Modal audio playback error (resume):', error);
                         if (playIcon) playIcon.textContent = 'play_arrow';
+                        if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
                     });
             }
         } else {
-            // 新しい音源、または audioElement がない場合
+            // 新しい音源、または modalAudioElement がない場合
             this.playModalAudio(audioSrc, buttonElement);
         }
     },
