@@ -1902,7 +1902,13 @@ const StoryPlayer = {
                 this.lastPlayAllIndex > 0 &&
                 this.lastPlayAllIndex < this.playAllItems.length
             ) {
-                const resumeMessage = messages?.resumePlayAll || `前回再生した「${this.playAllItems[this.lastPlayAllIndex].dataset.fileTitle || '続き'}」から再生しますか？`;
+                // 修正: {{TITLE}} の置換処理を追加
+                const fileTitleToResume = this.playAllItems[this.lastPlayAllIndex]?.dataset?.fileTitle || (Lang.data[Lang.current]?.messages?.defaultResumeTitle || '続き');
+                let resumeMessage = messages?.resumePlayAll || `前回再生した「${fileTitleToResume}」から再生しますか？`;
+                if (messages?.resumePlayAll) {
+                    resumeMessage = resumeMessage.replace('{{TITLE}}', fileTitleToResume);
+                }
+
                 if (confirm(resumeMessage)) {
                     startIndex = this.lastPlayAllIndex;
                 } else {
