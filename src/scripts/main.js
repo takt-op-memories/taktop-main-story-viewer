@@ -364,9 +364,61 @@ const StoryPlayer = {
                     en: char.nameEn
                 }
             }));
-            // 「不明なキャラクター」や「その他」を必要に応じて追加
-            // this.availableCharacters.push({ id: 'char_unknown', name: { ja: '不明なキャラクター', en: 'Unknown Character' } });
-            this.availableCharacters.push({ id: 'char_other', name: { ja: 'その他', en: 'Other' } });
+
+            // 必要に応じて追加
+            const addCharacters = [
+                { id: '1000', name: { ja: '管理官ヒルデ', en: 'Administrator Hilde' } }, // chapter 0
+                { id: '1001', name: { ja: '警備兵', en: 'Guard' } }, // chapter 0
+                { id: '1002', name: { ja: 'ムータ', en: 'Mutar' } }, // chapter 1
+                { id: '1003', name: { ja: '救護班', en: 'Medic' } }, // chapter 1
+                { id: '1004', name: { ja: '少年', en: 'Teenager' } }, // chapter 2
+                { id: '1005', name: { ja: 'アヴリル・バーグマン', en: 'Avril' } }, // chapter 2
+                { id: '1006', name: { ja: 'ニコラ・カヴァリエ', en: 'Nicolas' } }, // chapter 2
+                { id: '1007', name: { ja: 'ユーリィ', en: 'Yuri' } }, // chapter 3
+                { id: '1008', name: { ja: '避難民(男)', en: 'Male civilian' } }, // chapter 3
+                { id: '1009', name: { ja: '避難民(女)', en: 'Female civilian' } }, // chapter 3
+                { id: '1010', name: { ja: '避難民 1', en: 'Refugee 1' } }, // chapter 3
+                { id: '1011', name: { ja: '避難民 2', en: 'Refugee 2' } }, // chapter 3
+                { id: '1012', name: { ja: '避難民 3', en: 'Refugee 3' } }, // chapter 3
+                { id: '1013', name: { ja: '避難民 4', en: 'Refugee 4' } }, // chapter 3
+                { id: '1014', name: { ja: '避難民 5', en: 'Refugee 5' } }, // chapter 3
+                { id: '1015', name: { ja: '避難民 6', en: 'Refugee 6' } }, // chapter 3
+                { id: '1016', name: { ja: '長老', en: 'Elder' } }, // chapter 3
+                { id: '1017', name: { ja: '難民達', en: 'Refugees' } }, // chapter 3
+                { id: '1018', name: { ja: 'エリス教授', en: 'Prof. Ellis' } }, // chapter 4
+                { id: '1019', name: { ja: '研究官ドミニク', en: 'Researcher Dominic ' } }, // chapter 4
+                { id: '1020', name: { ja: '本屋店主', en: 'Bookshop Owner' } }, // chapter 4
+                { id: '1021', name: { ja: '地上同名戦線', en: 'Terra Front Man 1' } }, // chapter 4
+                { id: '1022', name: { ja: '地上同名戦線', en: 'Terra Front Man 2' } }, // chapter 4
+                { id: '1023', name: { ja: '地上同名戦線', en: 'Terra Front Man 3' } }, // chapter 4
+                { id: '10000', name: { ja: '？？？(ベルキス)', en: '??? (Belkis)' } }, // chapter 5
+                // chapter 6 is no new characters
+                { id: '1024', name: { ja: '？？？(ライヤ)', en: '??? (Leier)' } }, // chapter 7
+                { id: '1025', name: { ja: '？？？(ぱヴぁ男)', en: '??? (Dean)' } }, // chapter 7
+                { id: '1026', name: { ja: '？？？(パヴァーヌ)', en: '??? (Pavane)' } }, // chapter 7
+                { id: '1027', name: { ja: '亡き王女のためのパヴァーヌ', en: 'Pavane for a Dead Princess' } }, // chapter 7
+                { id: '1028', name: { ja: 'ライヤ・クラウス', en: 'Leier' } }, // chapter 7
+                { id: '1029', name: { ja: '日記', en: 'Diary' } }, // chapter 8
+                { id: '1030', name: { ja: 'ディーン・クラウス', en: 'Dean' } }, // chapter 8
+                { id: '1031', name: { ja: 'ミセスシュタイン', en: 'Mrs. Stein' } }, // chapter 8
+                { id: '1032', name: { ja: 'Ｄ２', en: 'Despair Doll' } }, // chapter 9
+                { id: '1033', name: { ja: '謎の人影', en: 'Mystery Figure' } }, // chapter 10
+                { id: '1034', name: { ja: 'アナウンス', en: 'Radio' } }, // chapter 11
+                { id: '1035', name: { ja: 'セイラの母', en: 'Sella\'s Mom' } }, // chapter 11
+                { id: '1036', name: { ja: '暴徒 1', en: 'Thug 1' } }, // chapter 11
+                { id: '1037', name: { ja: '暴徒 2', en: 'Thug 2' } }, // chapter 11
+                { id: '1038', name: { ja: '暴徒 3', en: 'Thug 3' } }, // chapter 11
+                { id: '1039', name: { ja: '暴徒 4', en: 'Thug 4' } }, // chapter 11
+                { id: '1040', name: { ja: 'セイラ', en: 'Sella' } }, // chapter 11
+                { id: '1041', name: { ja: '子ども', en: 'Child' } }, // chapter 11
+                { id: '1042', name: { ja: '歓喜', en: 'Ode to Joy' } }, // chapter 12
+                { id: '1043', name: { ja: '上官 1', en: 'Officer 1' } }, // chapter 12
+                { id: '1044', name: { ja: '上官 2', en: 'Officer 2' } }, // chapter 12
+                { id: '1045', name: { ja: '上官 3', en: 'Officer 3' } }, // chapter 12
+                { id: 'char_other', name: { ja: 'その他', en: 'Other' } }
+            ]
+
+            this.availableCharacters.push(...addCharacters);
             console.log('Characters loaded:', this.availableCharacters);
         } catch (error) {
             console.error('Error fetching characters:', error);
