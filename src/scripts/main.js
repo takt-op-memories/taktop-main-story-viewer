@@ -1043,10 +1043,16 @@ const StoryPlayer = {
     },
 
     playModalAudio(audioSrc, buttonElement) { // buttonElement を引数に追加
+        console.log('[playModalAudio] Called with src:', audioSrc); // デバッグログ追加
         if (this.modalAudioElement) { // モーダル専用オーディオを操作
+            console.log('[playModalAudio] Pausing existing modalAudioElement.'); // デバッグログ追加
             this.modalAudioElement.pause();
+            // 既存のイベントリスナーをクリア
+            this.modalAudioElement.onended = null;
+            this.modalAudioElement.onerror = null;
         }
         this.modalAudioElement = new Audio(audioSrc); // モーダル専用オーディオに代入
+        console.log('[playModalAudio] New modalAudioElement created. src:', this.modalAudioElement.src); // デバッグログ追加
         const playIcon = buttonElement ? buttonElement.querySelector('.material-icons') : null;
 
         // 他の再生中のオーディオ（メインリストなど）があれば停止
@@ -1077,28 +1083,46 @@ const StoryPlayer = {
         this.modalAudioElement.onended = () => {
             if (playIcon) playIcon.textContent = 'play_arrow';
             if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
+            console.log('[playModalAudio] Modal audio ended.'); // デバッグログ追加
         };
         this.modalAudioElement.onerror = () => {
             if (playIcon) playIcon.textContent = 'play_arrow';
             if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
-            console.error('Modal audio error event');
+            console.error('[playModalAudio] Modal audio error event.'); // デバッグログ追加
         };
     },
 
     toggleModalAudio(buttonElement, audioSrc) {
         const playIcon = buttonElement.querySelector('.material-icons');
-        // ファイル名だけでなく、完全なURLで比較するように変更
-        const isSameAudio = this.modalAudioElement && this.modalAudioElement.src === audioSrc;
+        // デバッグ用ログを追加
+        console.log('[toggleModalAudio] Called. Passed audioSrc:', audioSrc);
+        if (this.modalAudioElement) {
+            console.log('[toggleModalAudio] Current modalAudioElement.src:', this.modalAudioElement.src);
+            console.log('[toggleModalAudio] Current modalAudioElement.paused:', this.modalAudioElement.paused);
+        } else {
+            console.log('[toggleModalAudio] Current modalAudioElement is null.');
+        }
+
+        // URLをデコードしてから比較する
+        const decodedPassedSrc = decodeURIComponent(audioSrc);
+        const decodedCurrentSrc = this.modalAudioElement ? decodeURIComponent(this.modalAudioElement.src) : null;
+        const isSameAudio = this.modalAudioElement && decodedCurrentSrc === decodedPassedSrc;
+
+        console.log('[toggleModalAudio] Decoded passedSrc:', decodedPassedSrc);
+        console.log('[toggleModalAudio] Decoded currentSrc:', decodedCurrentSrc);
+        console.log('[toggleModalAudio] isSameAudio:', isSameAudio);
 
         if (isSameAudio) { // this.modalAudioElement が存在し、かつ src が同じ場合
             // 同じ音源に対する操作
             if (!this.modalAudioElement.paused) {
                 // 再生中なので停止
+                console.log('[toggleModalAudio] Audio is playing. Pausing.'); // デバッグログ追加
                 this.modalAudioElement.pause();
                 if (playIcon) playIcon.textContent = 'play_arrow';
                 if (buttonElement) buttonElement.classList.remove('playing'); // 再生中クラス削除
             } else {
                 // 停止中なので再生
+                console.log('[toggleModalAudio] Audio is paused. Playing from start.'); // デバッグログ変更
                 // 他の再生中のオーディオ（メインリストなど）があれば停止
                 if (this.audioElement && !this.audioElement.paused && this.audioElement !== this.modalAudioElement) {
                     this.audioElement.pause();
@@ -1112,6 +1136,7 @@ const StoryPlayer = {
                     this.stopPlayAll();
                 }
 
+                this.modalAudioElement.currentTime = 0; // ★ 再生位置を先頭に戻す
                 this.modalAudioElement.play()
                     .then(() => {
                         if (playIcon) playIcon.textContent = 'stop';
@@ -1125,7 +1150,8 @@ const StoryPlayer = {
             }
         } else {
             // 新しい音源、または modalAudioElement がない場合
-            this.playModalAudio(audioSrc, buttonElement);
+            console.log('[toggleModalAudio] Different audio or modalAudioElement is null. Calling playModalAudio.'); // デバッグログ追加
+            this.playModalAudio(audioSrc, buttonElement); // playModalAudio は常に新しいAudioオブジェクトを作成するため、最初から再生される
         }
     },
 
