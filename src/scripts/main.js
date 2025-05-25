@@ -343,6 +343,10 @@ const StoryPlayer = {
 
     playAllItems: [],
     currentPlayAllIndex: 0,
+    lastPlayedPart: null, // 追加: 最後に「すべて再生」が実行されたパート
+    lastPlayedChapter: null, // 追加: 最後に「すべて再生」が実行されたチャプター
+    lastPlayAllIndex: 0, // 追加: 「すべて再生」が最後に停止したインデックス
+    playAllCompleted: false, // 追加: 前回の「すべて再生」が最後まで完了したか
 
     // --- 仮のキャラクターリストと言語リスト ---
     // 本来はAPIや設定ファイルから取得する
@@ -357,6 +361,11 @@ const StoryPlayer = {
         await this.loadSelectors();
         await this.fetchCharacters();
         this.setupEventListeners();
+        // 追加: プロパティの初期化（必要に応じて）
+        this.lastPlayedPart = null;
+        this.lastPlayedChapter = null;
+        this.lastPlayAllIndex = 0;
+        this.playAllCompleted = false;
     },
 
     async fetchCharacters() {
@@ -572,6 +581,8 @@ const StoryPlayer = {
         if (!this.selectedPart || !this.selectedChapter) {
             this.clearStoryList();
         }
+        // 追加: 「すべて再生」関連の情報をリセット
+        this.resetPlayAllState();
     },
 
     async onChapterChange(event) {
@@ -583,7 +594,21 @@ const StoryPlayer = {
         } else {
             this.clearStoryList();
         }
+        // 追加: 「すべて再生」関連の情報をリセット
+        this.resetPlayAllState();
     },
+
+    // 追加: 「すべて再生」の状態をリセットするヘルパーメソッド
+    resetPlayAllState() {
+        this.lastPlayedPart = null;
+        this.lastPlayedChapter = null;
+        this.lastPlayAllIndex = 0;
+        this.playAllCompleted = false;
+        if (this.isPlayingAll) {
+            this.stopPlayAll(); // 進行中なら停止も行う
+        }
+    },
+
     clearStoryList() {
         const storyList = document.getElementById('story-list');
         storyList.innerHTML = ''; // Clear previous items
@@ -1803,7 +1828,7 @@ const StoryPlayer = {
 
             if (this.currentPlayingItem) { // Reset previous if any
                 this.resetPlayButton(this.currentPlayingItem);
-                this.resetPlayingItem(this.currentPlayingItem);
+                this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
             }
             scrollIntoViewIfNeeded(item);
 
@@ -1839,6 +1864,10 @@ const StoryPlayer = {
                 this.playNextInAll(); // Try next
             };
         } else {
+            // 変更: 再生が最後まで完了した場合
+            if (this.isPlayingAll) { // 意図しない呼び出しを防ぐ
+                this.playAllCompleted = true; // 最後まで再生完了したことを記録
+            }
             this.stopPlayAll(); // All items played or stopped
         }
     },
@@ -1853,15 +1882,44 @@ const StoryPlayer = {
         const icon = playAllBtn.querySelector('.material-icons');
         const span = playAllBtn.querySelector('span:last-child');
         const strings = Lang.data[Lang.current].controls;
+        const messages = Lang.data[Lang.current].messages;
 
         if (this.isPlayingAll) {
+            // 変更: 手動で停止する場合
+            this.lastPlayAllIndex = this.currentPlayAllIndex; // 停止したインデックスを保存
+            this.playAllCompleted = false; // 手動停止なので完了ではない
             this.stopPlayAll();
         } else {
             this.playAllItems = Array.from(document.querySelectorAll('#story-list .story-item'));
             if (this.playAllItems.length === 0) return;
 
+            let startIndex = 0;
+            // 変更: 続きから再生するかの確認ロジック
+            if (
+                this.lastPlayedPart === this.selectedPart &&
+                this.lastPlayedChapter === this.selectedChapter &&
+                !this.playAllCompleted &&
+                this.lastPlayAllIndex > 0 &&
+                this.lastPlayAllIndex < this.playAllItems.length
+            ) {
+                const resumeMessage = messages?.resumePlayAll || `前回再生した「${this.playAllItems[this.lastPlayAllIndex].dataset.fileTitle || '続き'}」から再生しますか？`;
+                if (confirm(resumeMessage)) {
+                    startIndex = this.lastPlayAllIndex;
+                } else {
+                    // 「いいえ」の場合、最初から再生するので状態をリセット
+                    this.resetPlayAllState(); // lastPlayAllIndex などもリセット
+                }
+            } else {
+                // 条件に合致しない場合（初回、パート/チャプター変更、前回完了時）は状態をリセット
+                this.resetPlayAllState();
+            }
+
             this.isPlayingAll = true;
-            this.currentPlayAllIndex = 0;
+            this.currentPlayAllIndex = startIndex;
+            this.lastPlayedPart = this.selectedPart; // 現在のパート/チャプターを記録
+            this.lastPlayedChapter = this.selectedChapter;
+            this.playAllCompleted = false; // 新しい再生なので未完了
+
             if (this.currentPlayingItem) { // Stop individual play if any
                 this.audioElement?.pause();
                 this.resetPlayButton(this.currentPlayingItem);
@@ -1876,6 +1934,7 @@ const StoryPlayer = {
     },
 
     stopPlayAll() {
+        const wasPlaying = this.isPlayingAll; // 停止前に再生中だったか
         this.isPlayingAll = false;
         if (this.audioElement) {
             this.audioElement.pause();
@@ -1885,8 +1944,9 @@ const StoryPlayer = {
             this.resetPlayingItem(this.currentPlayingItem.closest('.story-item'));
             this.currentPlayingItem = null;
         }
-        this.playAllItems = [];
-        this.currentPlayAllIndex = 0;
+        // playAllItems はクリアするが、lastPlayAllIndex は togglePlayAll での参照用に残す場合がある
+        // this.playAllItems = []; // ここではクリアしない方が良いかもしれない
+        // this.currentPlayAllIndex = 0; // これも同様
 
         const playAllBtn = document.querySelector('.bulk-controls .play-all-btn');
         if (playAllBtn) {
@@ -1897,6 +1957,18 @@ const StoryPlayer = {
             icon.textContent = 'play_arrow';
             span.textContent = strings.playAll;
         }
+
+        // 変更: stopPlayAll が呼ばれたときの状態を整理
+        if (wasPlaying && !this.playAllCompleted) {
+            // ユーザーが手動で停止した場合やエラーで停止した場合
+            // lastPlayAllIndex は togglePlayAll で設定済みか、playNextInAll のエラー処理でインクリメントされている
+        } else if (this.playAllCompleted) {
+            // 最後まで再生しきった場合
+            this.lastPlayAllIndex = 0; // 次回は最初から
+        }
+        // playAllItems は次の togglePlayAll で再取得されるので、ここではクリアしても良い
+        this.playAllItems = [];
+        this.currentPlayAllIndex = 0; // 内部的な再生インデックスはリセット
     },
 
     createProgressOverlay() {

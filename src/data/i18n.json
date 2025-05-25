@@ -28,7 +28,8 @@
             "undefinedText": "未定義",
             "dataContributionRequest": "データの追加にご協力ください",
             "success_pr_created": "「{{part}}/{{chapter}}/{{file}}」の更新提案が作成されました！",
-            "noFilesToDownload": "ダウンロードできるファイルがありませんでした。"
+            "noFilesToDownload": "ダウンロードできるファイルがありませんでした。",
+            "resumePlayAll": "前回再生した「{{TITLE}}」の続きから再生しますか？"
         },
         "menu": {
             "editData": "データの修正",
@@ -103,7 +104,8 @@
             "undefinedText": "undefined",
             "dataContributionRequest": "Please help add data.",
             "success_pr_created": "Update proposal for '{{part}}/{{chapter}}/{{file}}' has been created!",
-            "noFilesToDownload": "No files could be prepared for download."
+            "noFilesToDownload": "No files could be prepared for download.",
+            "resumePlayAll": "Resume playing from \"{{TITLE}}\" where you left off?"
         },
         "menu": {
             "editData": "Edit Data",
