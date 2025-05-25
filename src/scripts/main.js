@@ -103,6 +103,12 @@ const Lang = {
 
         const statusChecker = new AuthStatusChecker();
         statusChecker.checkStatus();
+
+        // ストーリーリストが既に表示されている場合（パートとチャプターが選択されている場合）、
+        // ストーリーリストを再読み込みして言語表示を更新します。
+        if (StoryPlayer.selectedPart && StoryPlayer.selectedChapter) {
+            StoryPlayer.loadStoryFiles();
+        }
     },
 
     async apply() {
