@@ -332,6 +332,7 @@ const StoryPlayer = {
     boundHandleDocumentClickForMenu: null, // メニュー用ドキュメントクリックハンドラ
     activeModal: null, // 現在表示中のモーダル
     editingItemData: null, // モーダルで編集中のアイテムデータ
+    initialModalData: null, // モーダル表示時の初期データ（変更比較用）
 
     playAllItems: [],
     currentPlayAllIndex: 0,
@@ -802,6 +803,7 @@ const StoryPlayer = {
             this.activeModal.remove();
             this.activeModal = null;
             this.editingItemData = null;
+            this.initialModalData = null; // 初期データもクリア
             if (this.audioElement && !this.audioElement.paused) { // モーダルを閉じるときに音声停止
                 this.audioElement.pause();
                 // 必要であればメインリストの再生ボタン状態もリセット
@@ -812,45 +814,76 @@ const StoryPlayer = {
     validateModalForm() {
         const form = document.getElementById('edit-form');
         const submitBtn = document.getElementById('modal-submit-btn');
-        if (!form || !submitBtn) return false;
+        if (!form || !submitBtn) return { isValid: false, hasChanges: false, reason: 'form_not_ready' };
 
-        const character = form.elements['character'].value;
-        const language = form.elements['language'].value;
-        const textInput = form.elements['text'].value.trim();
+        const currentCharacterId = form.elements['character'].value;
+        const currentLanguage = form.elements['language'].value;
+        const currentText = form.elements['text'].value.trim();
 
-        // 「未定義」や「undefined」といった文字列そのものでないかもチェック
-        const currentLang = Lang.current || 'en';
-        const langMessages = Lang.data?.[currentLang]?.messages;
-        const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase(); // 判定用に小文字化
+        const currentLangUI = Lang.current || 'en';
+        const langMessages = Lang.data?.[currentLangUI]?.messages;
+        const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase();
 
-        let isTextValid = textInput !== '';
-        if (isTextValid) {
-            // textInput が undefinedTextStr と完全に一致する場合 (大文字小文字区別せず) は無効
-            if (textInput.toLowerCase() === undefinedTextStr) {
-                isTextValid = false;
-            }
+        let isTextFilled = currentText !== '';
+        if (isTextFilled && currentText.toLowerCase() === undefinedTextStr) {
+            isTextFilled = false;
         }
-        // 他にも無効としたい文字列があればここに追加
-        // const ngWords = ['未定義', 'undefined', 'null'];
-        // if (ngWords.map(w => w.toLowerCase()).includes(textInput.toLowerCase())) {
-        //     isTextValid = false;
-        // }
+        const basicValidationPassed = currentCharacterId && currentLanguage && isTextFilled;
 
+        let isDataChanged = false;
 
-        const isValid = character && language && isTextValid;
-        submitBtn.disabled = !isValid;
-        return isValid;
+        if (this.editingItemData && this.initialModalData) {
+            // isDataMissing が true の場合は、常に変更ありとみなす (新規追加なので)
+            if (this.editingItemData.isDataMissing) {
+                isDataChanged = true;
+            } else {
+                // 既存データの編集時のみ変更チェック
+                const initialCharIdToCompare = this.initialModalData.characterId;
+                const initialLangToCompare = this.initialModalData.language;
+                const initialTextToCompare = this.initialModalData.text; // showEditModalでundefinedTextStrは''に変換済み
+
+                const currentTextForComparison = (currentText.toLowerCase() === undefinedTextStr) ? '' : currentText;
+
+                if (currentCharacterId !== initialCharIdToCompare) {
+                    isDataChanged = true;
+                } else if (currentLanguage !== initialLangToCompare) {
+                    isDataChanged = true;
+                } else if (currentTextForComparison !== initialTextToCompare) {
+                    isDataChanged = true;
+                } else {
+                    isDataChanged = false;
+                }
+            }
+        } else {
+            // editingItemData や initialModalData がない異常系。
+            // 基本バリデーションに任せるが、変更はあったものとして扱う。
+            isDataChanged = true;
+        }
+
+        const canSubmit = basicValidationPassed && isDataChanged;
+        submitBtn.disabled = !canSubmit;
+
+        if (!basicValidationPassed) {
+            return { isValid: false, hasChanges: isDataChanged, reason: 'validation_failed' };
+        }
+        // 新規追加でない場合で変更がない場合のみ hasChanges: false とする
+        if (!isDataChanged && !(this.editingItemData && this.editingItemData.isDataMissing)) {
+            return { isValid: true, hasChanges: false, reason: 'no_changes_made' };
+        }
+        return { isValid: true, hasChanges: true, reason: 'ok' };
     },
 
     async handleModalSubmit(event) {
         event.preventDefault();
-        const currentLang = Lang.current || 'en'; // 現在のUI言語
-        const langModalTexts = Lang.data?.[currentLang]?.modal;
-        const langMessages = Lang.data?.[currentLang]?.messages;
-        const langErrorMessages = Lang.data?.[currentLang]?.errorMessages; // エラーメッセージ用のi18nキーを追加想定
+        const currentLangUI = Lang.current || 'en';
+        const langModalTexts = Lang.data?.[currentLangUI]?.modal;
+        const langMessages = Lang.data?.[currentLangUI]?.messages;
+        const langErrorMessages = Lang.data?.[currentLangUI]?.errorMessages;
 
 
-        if (!this.validateModalForm()) { // validateModalForm を再利用
+        const validationResult = this.validateModalForm();
+
+        if (!validationResult.isValid) {
             let alertMessage = langModalTexts?.validationError || 'Please fill in all required fields (Character, Language, Text).';
             const textInputValue = document.getElementById('modal-text')?.value.trim().toLowerCase();
             const undefinedTextStr = (langMessages?.undefinedText || 'undefined').toLowerCase();
@@ -858,6 +891,14 @@ const StoryPlayer = {
                 alertMessage = langModalTexts?.textIsStillUndefined || `The text field cannot be '${langMessages?.undefinedText || 'undefined'}'. Please enter valid text.`;
             }
             alert(alertMessage);
+            return;
+        }
+
+        // isDataMissing が false (つまり編集モード) で、かつ変更がない場合
+        if (!validationResult.hasChanges && this.editingItemData && !this.editingItemData.isDataMissing) {
+            alert(langModalTexts?.noChangesMade || 'No changes were made to the data.');
+            const submitButton = document.getElementById('modal-submit-btn');
+            if (submitButton) submitButton.disabled = true; // Ensure button is disabled
             return;
         }
 
@@ -1016,11 +1057,40 @@ const StoryPlayer = {
 
     showEditModal(fileData, isDataMissing) {
         this.closeEditModal();
-        this.editingItemData = fileData;
+        this.editingItemData = { ...fileData, isDataMissing }; // isDataMissing を editingItemData に含める
 
         const currentLang = Lang.current || 'en';
         const langModalTexts = Lang.data?.[currentLang]?.modal;
         const langMessages = Lang.data?.[currentLang]?.messages;
+
+        // --- initialModalData の設定 ---
+        let initialCharacterId = fileData.character_id; // voice.json に character_id があればそれを使う
+        if (!initialCharacterId) { // なければ名前から解決試行
+            const nameToFind = fileData.character_name || fileData.character_enName;
+            if (nameToFind) {
+                const foundChar = this.availableCharacters.find(c =>
+                    (c.name.ja === nameToFind) || (c.name.en === nameToFind)
+                );
+                if (foundChar) initialCharacterId = foundChar.id;
+            }
+        }
+        initialCharacterId = initialCharacterId || '';
+
+
+        const initialLanguage = currentLang; // モーダルの言語選択の初期値は現在のUI言語
+
+        let initialTextValue = fileData[`text_${initialLanguage}`] || fileData.text || '';
+        const undefinedStrForCurrentLang = (langMessages?.undefinedText || 'undefined').toLowerCase();
+        if (initialTextValue.toLowerCase() === undefinedStrForCurrentLang) {
+            initialTextValue = ''; // 比較用に空文字に統一
+        }
+
+        this.initialModalData = {
+            characterId: initialCharacterId,
+            language: initialLanguage,
+            text: initialTextValue
+        };
+        // --- initialModalData の設定ここまで ---
 
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'modal-overlay';
@@ -1098,14 +1168,8 @@ const StoryPlayer = {
         this.availableCharacters.forEach(char => {
             const charName = char.name[currentLang] || char.name.en || char.id;
             const option = new Option(charName, char.id);
-            let currentCharacterId = fileData.character_id;
-            if (!currentCharacterId && fileData.character_name) {
-                const foundChar = this.availableCharacters.find(c =>
-                    (c.name.ja === fileData.character_name) || (c.name.en === fileData.character_name)
-                );
-                if (foundChar) currentCharacterId = foundChar.id;
-            }
-            if (currentCharacterId === char.id) option.selected = true;
+            // initialModalData からキャラクターIDを取得して選択状態にする
+            if (this.initialModalData.characterId === char.id) option.selected = true;
             charSelect.appendChild(option);
         });
         charDiv.appendChild(charSelect);
@@ -1122,7 +1186,8 @@ const StoryPlayer = {
         langSelect.innerHTML = `<option value="">${langModalTexts?.selectLanguage || 'Select Language'}</option>`;
         this.availableLanguages.forEach(lang => {
             const option = new Option(lang.name, lang.id);
-            if (lang.id === currentLang) option.selected = true;
+            // initialModalData から言語IDを取得して選択状態にする
+            if (this.initialModalData.language === lang.id) option.selected = true;
             langSelect.appendChild(option);
         });
         langDiv.appendChild(langSelect);
@@ -1137,14 +1202,17 @@ const StoryPlayer = {
         textArea.name = 'text';
         textArea.rows = 5;
         textArea.required = true;
-        // 初期値が「未定義」や「undefined」の場合、空にするかユーザーに編集を促す
-        let initialText = fileData[`text_${currentLang}`] || fileData.text || '';
-        const undefinedStrForCurrentLang = (langMessages?.undefinedText || 'undefined').toLowerCase();
-        if (initialText.toLowerCase() === undefinedStrForCurrentLang) {
-            initialText = ''; // または、プレースホルダーで促す
-            // textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
+        // initialModalData からテキストを取得して設定
+        // isDataMissing が true (新規追加) の場合は、initialModalData.text は空のはず
+        // 編集時で、元が undefinedTextStr だった場合も initialModalData.text は空になっている
+        textArea.value = this.initialModalData.text;
+        if (isDataMissing && !this.initialModalData.text) { // 新規追加で空の場合、プレースホルダーで入力を促す
+            textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
+        } else if (!isDataMissing && this.initialModalData.text === '' && (fileData[`text_${initialLanguage}`] || fileData.text || '').toLowerCase() === undefinedStrForCurrentLang) {
+            // 編集モードで、元が undefined だった場合 (今は空になっている)
+            textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
         }
-        textArea.value = initialText;
+
         textDiv.appendChild(textArea);
         form.appendChild(textDiv);
 
