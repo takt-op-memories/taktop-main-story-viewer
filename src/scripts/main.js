@@ -1194,15 +1194,9 @@ const StoryPlayer = {
 
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'modal-overlay';
-        // modalOverlay.addEventListener('click', (e) => { // モーダル外クリックで閉じないように削除
-        //     if (e.target === modalOverlay) {
-        //         this.closeEditModal();
-        //     }
-        // });
 
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
-        // ... (modalHeader, closeBtn の生成は前回と同様)
         const modalHeader = document.createElement('div');
         modalHeader.className = 'modal-header';
         const titleText = isDataMissing ? (langModalTexts?.titleAdd || 'Add Data') : (langModalTexts?.titleEdit || 'Edit Data');
@@ -1258,14 +1252,13 @@ const StoryPlayer = {
         `;
         currentInfoDiv.appendChild(currentInfoTextDiv);
 
-        // モーダル内音声再生ボタン (データが存在する場合のみ)
         if (fileData.name && this.selectedPart && this.selectedChapter) {
             const audioPlayerDiv = document.createElement('div');
             audioPlayerDiv.className = 'modal-audio-player';
             const audioSrc = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileData.name}.mp3`;
             const playBtn = document.createElement('button');
             playBtn.type = 'button';
-            playBtn.className = 'modal-audio-play-btn play-btn'; // 既存のplay-btnスタイルを流用可能
+            playBtn.className = 'modal-audio-play-btn play-btn';
             playBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
             playBtn.setAttribute('aria-label', Lang.data?.[currentLang]?.buttons?.play || 'Play');
             playBtn.onclick = () => this.toggleModalAudio(playBtn, audioSrc);
@@ -1278,14 +1271,33 @@ const StoryPlayer = {
         const form = document.createElement('form');
         form.id = 'edit-form';
         form.onsubmit = (e) => this.handleModalSubmit(e);
-        form.oninput = () => this.validateModalForm(); // 入力時にバリデーション
+        form.oninput = () => this.validateModalForm();
 
         // Character Select
         const charDiv = document.createElement('div');
-        // 必須マークの位置調整のため、ラベルテキストとマークを分ける
-        charDiv.innerHTML = `<label for="modal-character">${langModalTexts?.character || 'Character'}:<span class="required-asterisk">*</span></label>`;
+        charDiv.className = 'form-field-container'; // ラベルと入力フィールド、注釈をまとめるコンテナ
+
+        const charLabelContainer = document.createElement('div'); // ラベルと注釈を横並びにするためのコンテナ
+        charLabelContainer.className = 'label-note-container'; // CSSでスタイルを指定するためのクラス
+        const charLabel = document.createElement('label');
+        charLabel.htmlFor = 'modal-character';
+        charLabel.innerHTML = `${langModalTexts?.character || 'Character'}:<span class="required-asterisk">*</span>`;
+        charLabelContainer.appendChild(charLabel);
+
+        const charNote = document.createElement('div');
+        charNote.className = 'field-note data-missing-indicator small-note'; // 既存のスタイルを流用しつつ調整
+        const charNoteIcon = document.createElement('span');
+        charNoteIcon.className = 'material-icons data-missing-icon';
+        charNoteIcon.textContent = 'info_outline';
+        charNote.appendChild(charNoteIcon);
+        const charNoteText = document.createElement('span');
+        charNoteText.className = 'data-missing-text';
+        charNoteText.innerHTML = langModalTexts?.characterNote || '対象のキャラが見つからない場合は「その他」を選択してください';
+        charNote.appendChild(charNoteText);
+        charLabelContainer.appendChild(charNote);
+        charDiv.appendChild(charLabelContainer);
+
         const charSelect = document.createElement('select');
-        // ... (charSelect の設定は変更なし)
         charSelect.id = 'modal-character';
         charSelect.name = 'character';
         charSelect.required = true;
@@ -1293,7 +1305,6 @@ const StoryPlayer = {
         this.availableCharacters.forEach(char => {
             const charName = char.name[currentLang] || char.name.en || char.id;
             const option = new Option(charName, char.id);
-            // initialModalData からキャラクターIDを取得して選択状態にする
             if (this.initialModalData.characterId === char.id) option.selected = true;
             charSelect.appendChild(option);
         });
@@ -1302,16 +1313,35 @@ const StoryPlayer = {
 
         // Language Select
         const langDiv = document.createElement('div');
-        langDiv.innerHTML = `<label for="modal-language">${langModalTexts?.language || 'Language'}:<span class="required-asterisk">*</span></label>`;
+        langDiv.className = 'form-field-container';
+
+        const langLabelContainer = document.createElement('div');
+        langLabelContainer.className = 'label-note-container';
+        const langLabel = document.createElement('label');
+        langLabel.htmlFor = 'modal-language';
+        langLabel.innerHTML = `${langModalTexts?.language || 'Language'}:<span class="required-asterisk">*</span>`;
+        langLabelContainer.appendChild(langLabel);
+
+        const langNote = document.createElement('div');
+        langNote.className = 'field-note data-missing-indicator small-note';
+        const langNoteIcon = document.createElement('span');
+        langNoteIcon.className = 'material-icons data-missing-icon';
+        langNoteIcon.textContent = 'contact_support'; // アイコン変更
+        langNote.appendChild(langNoteIcon);
+        const langNoteText = document.createElement('span');
+        langNoteText.className = 'data-missing-text';
+        langNoteText.innerHTML = langModalTexts?.languageNote || '表示されていない言語を追加したい場合はDiscord「.r91」までご連絡ください';
+        langNote.appendChild(langNoteText);
+        langLabelContainer.appendChild(langNote);
+        langDiv.appendChild(langLabelContainer);
+
         const langSelect = document.createElement('select');
-        // ... (langSelect の設定は変更なし)
         langSelect.id = 'modal-language';
         langSelect.name = 'language';
         langSelect.required = true;
         langSelect.innerHTML = `<option value="">${langModalTexts?.selectLanguage || 'Select Language'}</option>`;
         this.availableLanguages.forEach(lang => {
             const option = new Option(lang.name, lang.id);
-            // initialModalData から言語IDを取得して選択状態にする
             if (this.initialModalData.language === lang.id) option.selected = true;
             langSelect.appendChild(option);
         });
@@ -1320,24 +1350,19 @@ const StoryPlayer = {
 
         // Text Input
         const textDiv = document.createElement('div');
+        // textDiv.className = 'form-field-container'; // 必要であれば
         textDiv.innerHTML = `<label for="modal-text">${langModalTexts?.text || 'Text'}:<span class="required-asterisk">*</span></label>`;
         const textArea = document.createElement('textarea');
-        // ... (textArea の設定は変更なし)
         textArea.id = 'modal-text';
         textArea.name = 'text';
         textArea.rows = 5;
         textArea.required = true;
-        // initialModalData からテキストを取得して設定
-        // isDataMissing が true (新規追加) の場合は、initialModalData.text は空のはず
-        // 編集時で、元が undefinedTextStr だった場合も initialModalData.text は空になっている
         textArea.value = this.initialModalData.text;
-        if (isDataMissing && !this.initialModalData.text) { // 新規追加で空の場合、プレースホルダーで入力を促す
+        if (isDataMissing && !this.initialModalData.text) {
             textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
         } else if (!isDataMissing && this.initialModalData.text === '' && (fileData[`text_${initialLanguage}`] || fileData.text || '').toLowerCase() === undefinedStrForCurrentLang) {
-            // 編集モードで、元が undefined だった場合 (今は空になっている)
             textArea.placeholder = langModalTexts?.pleaseEnterText || "Please enter valid text.";
         }
-
         textDiv.appendChild(textArea);
         form.appendChild(textDiv);
 
@@ -1345,26 +1370,22 @@ const StoryPlayer = {
         const contributorDetails = document.createElement('details');
         contributorDetails.className = 'contributor-details';
         const contributorSummary = document.createElement('summary');
-        contributorSummary.textContent = langModalTexts?.showContributorInfo || 'Contributor Information'; // 初期は表示テキスト
+        contributorSummary.textContent = langModalTexts?.showContributorInfo || 'Contributor Information';
         contributorDetails.appendChild(contributorSummary);
 
         const contributorSection = document.createElement('div');
-        contributorSection.className = 'contributor-section-content'; // CSS用クラス
-        const contributorInput = document.createElement('input'); // input要素を直接作成
+        contributorSection.className = 'contributor-section-content';
+        const contributorInput = document.createElement('input');
         contributorInput.type = 'text';
         contributorInput.id = 'modal-contributor';
         contributorInput.name = 'contributor';
-        // localStorageから保存された投稿者情報を読み込んで設定
         const savedContributor = localStorage.getItem(STORAGE_KEY.CONTRIBUTOR_INFO);
-        if (savedContributor !== null) { // nullもチェック（空文字は有効な値として扱う）
+        if (savedContributor !== null) {
             contributorInput.value = savedContributor;
         }
-
         contributorSection.innerHTML = `<label for="modal-contributor">${langModalTexts?.contributorName || 'Contributor Name (Optional)'}:</label>`;
-        contributorSection.appendChild(contributorInput); // input要素を追加
-
+        contributorSection.appendChild(contributorInput);
         contributorDetails.appendChild(contributorSection);
-        // summaryのテキストをdetailsのopen/closeで変更する
         contributorDetails.addEventListener('toggle', function () {
             if (this.open) {
                 contributorSummary.textContent = langModalTexts?.hideContributorInfo || 'Hide Contributor Info';
@@ -1384,7 +1405,7 @@ const StoryPlayer = {
         submitBtn.id = 'modal-submit-btn';
         submitBtn.textContent = langModalTexts?.submit || 'Submit';
         submitBtn.setAttribute('form', 'edit-form');
-        submitBtn.disabled = true; // 初期は非活性
+        submitBtn.disabled = true;
         modalFooter.appendChild(submitBtn);
         modalContent.appendChild(modalFooter);
 
@@ -1393,7 +1414,7 @@ const StoryPlayer = {
         this.activeModal = modalOverlay;
 
         charSelect.focus();
-        this.validateModalForm(); // 初期状態のバリデーションを実行
+        this.validateModalForm();
     },
 
     async loadStoryFiles() {

@@ -56,7 +56,9 @@
             "submitSuccess": "データが正常に送信され、更新提案が作成されました！",
             "submitError": "送信に失敗しました: {{message}}",
             "submitErrorGeneric": "予期せぬエラーが発生しました。",
-            "characterNotFoundError": "エラー：選択されたキャラクターデータが見つかりません。キャラクターを選択してください。"
+            "characterNotFoundError": "エラー：選択されたキャラクターデータが見つかりません。キャラクターを選択してください。",
+            "characterNote": "対象のキャラが見つからない場合は<br>「その他」を選択してください",
+            "languageNote": "表示されていない言語を追加したい場合は<br>Discord「.r91」までご連絡ください"
         },
         "errorMessages": {
             "error_missing_language": "言語が指定されていないか無効です (ファイル: {{file}})。テキストを更新できません。",
@@ -129,7 +131,9 @@
             "submitSuccess": "Data submitted successfully and update proposal created!",
             "submitError": "Submission failed: {{message}}",
             "submitErrorGeneric": "An unexpected error occurred.",
-            "characterNotFoundError": "Error: Selected character data is missing. Please select a character."
+            "characterNotFoundError": "Error: Selected character data is missing. Please select a character.",
+            "characterNote": "If the target character is not found,<br> please select 'Other'.",
+            "languageNote": "If you want to add a language that is not displayed,<br> please contact '.r91' on Discord."
         },
         "errorMessages": {
             "error_missing_language": "Language is missing or invalid (File: {{file}}). Cannot update text.",

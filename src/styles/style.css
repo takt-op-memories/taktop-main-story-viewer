@@ -923,6 +923,79 @@ footer .site-name {
     font-weight: bold;
 }
 
+/* モーダル内のフォームフィールドコンテナ */
+.modal-body .form-field-container {
+    margin-bottom: 1.2rem;
+}
+
+/* ラベルと注釈を横並びにするコンテナ */
+.label-note-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.1rem !important;
+    flex-wrap: wrap;
+}
+
+.label-note-container label {
+    margin-right: 6px;
+    /* ラベルと注釈の間のスペースを少し詰める */
+}
+
+/* モーダル内のフィールド注釈 */
+.field-note {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    /* パディングをさらに小さく */
+    border-radius: 8px;
+    /* 丸みを少し調整 */
+    font-size: 0.6em;
+    /* フォントサイズをさらに小さく */
+    line-height: 1.2;
+    /* 行間を詰める */
+    background-color: #1e3a8a;
+    color: #bfdbfe;
+    /* margin-left: auto; */
+    /* 右寄せにする場合はコメント解除 */
+}
+
+/* data-missing-indicator と small-note を併用する場合の調整 */
+.field-note.small-note .data-missing-icon {
+    font-size: 12px;
+    /* アイコンサイズをさらに小さく */
+    margin-right: 2px;
+    /* アイコンとテキストの間隔を詰める */
+}
+
+.field-note.small-note .data-missing-text {
+    font-size: 0.9em;
+    /* テキストサイズを親要素基準で調整 (0.6em * 0.9em) */
+    white-space: nowrap;
+    /* テキストが折り返さないようにする（短い注釈向け） */
+}
+
+/* スマホ表示での注釈テキストの表示 (以前は非表示だった部分を修正) */
+@media (max-width: 480px) {
+    .label-note-container {
+        /* スマホではラベルと注釈が縦に並ぶことも許容する (必要に応じて) */
+        /* align-items: flex-start; */
+    }
+
+    .field-note.small-note .data-missing-text {
+        display: inline;
+        /* テキストを常に表示 */
+        white-space: normal;
+        /* スマホではテキストの折り返しを許可 */
+    }
+
+    .field-note {
+        font-size: 0.55em;
+        /* スマホではさらに少しだけフォントを小さく */
+        margin-top: 2px;
+        /* ラベルとの間に少しマージン */
+    }
+}
+
 .contributor-details {
     margin-bottom: 1.2rem;
     /* 他のフォーム要素との間隔 */
