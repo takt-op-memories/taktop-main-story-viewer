@@ -1072,10 +1072,10 @@ const StoryPlayer = {
 
     toggleModalAudio(buttonElement, audioSrc) {
         const playIcon = buttonElement.querySelector('.material-icons');
-        const currentAudioFileName = this.modalAudioElement ? this.modalAudioElement.src.substring(this.modalAudioElement.src.lastIndexOf('/') + 1) : null;
-        const newAudioFileName = audioSrc.substring(audioSrc.lastIndexOf('/') + 1);
+        // ファイル名だけでなく、完全なURLで比較するように変更
+        const isSameAudio = this.modalAudioElement && this.modalAudioElement.src === audioSrc;
 
-        if (this.modalAudioElement && currentAudioFileName === newAudioFileName) {
+        if (isSameAudio) { // this.modalAudioElement が存在し、かつ src が同じ場合
             // 同じ音源に対する操作
             if (!this.modalAudioElement.paused) {
                 // 再生中なので停止
@@ -1657,48 +1657,59 @@ const StoryPlayer = {
             return;
         }
 
+        // 「すべて再生」中に、現在再生中のアイテムのボタンが押された場合
+        if (this.isPlayingAll && this.currentPlayingItem === buttonElement) {
+            this.stopPlayAll(); // 「すべて再生」を停止し、関連する状態をリセット
+            return; // 処理を終了
+        }
+        // 「すべて再生」中だが、別のアイテムの再生ボタンが押された場合
         if (this.isPlayingAll) {
-            this.stopPlayAll();
+            this.stopPlayAll(); // まず「すべて再生」を停止
+            // この後、押されたボタンの音声を再生する処理に進む
         }
 
+
         if (this.currentPlayingItem === buttonElement) {
+            // 通常再生中に同じボタンが押された場合 (停止処理)
             this.audioElement?.pause();
             this.resetPlayButton(buttonElement);
-            this.resetPlayingItem(buttonElement);
+            this.resetPlayingItem(buttonElement.closest('.story-item')); // buttonElementからstory-itemを取得
             this.currentPlayingItem = null;
             return;
         }
 
+        // 他の音声が再生中であれば停止
         if (this.currentPlayingItem) {
             this.audioElement?.pause();
             this.resetPlayButton(this.currentPlayingItem);
-            this.resetPlayingItem(this.currentPlayingItem);
+            this.resetPlayingItem(this.currentPlayingItem.closest('.story-item')); // 同様にstory-itemを取得
         }
 
+        // 新しい音声を再生
         const audioUrl = `${CONFIG.DB_BASE}src/mp3/${this.selectedPart}/${this.selectedChapter}/${fileName}.mp3`;
         this.audioElement = new Audio(audioUrl);
         this.audioElement.play().catch(error => {
             console.error('Playback error:', error);
             alert(Lang.data?.[Lang.current]?.messages?.playbackError || 'Playback error. Please check the console for details.');
             this.resetPlayButton(buttonElement);
-            this.resetPlayingItem(buttonElement);
-            this.currentPlayingItem = null;
+            this.resetPlayingItem(buttonElement.closest('.story-item'));
+            this.currentPlayingItem = null; // エラー時は currentPlayingItem をクリア
         });
 
         this.setPlayingButton(buttonElement);
-        this.setPlayingItem(buttonElement);
+        this.setPlayingItem(buttonElement.closest('.story-item')); // buttonElementからstory-itemを取得
         this.currentPlayingItem = buttonElement;
 
         this.audioElement.onended = () => {
             this.resetPlayButton(buttonElement);
-            this.resetPlayingItem(buttonElement);
+            this.resetPlayingItem(buttonElement.closest('.story-item'));
             this.currentPlayingItem = null;
         };
         this.audioElement.onerror = () => {
             console.error('Audio error:', this.audioElement.error);
             alert(Lang.data?.[Lang.current]?.messages?.playbackError || 'Playback error. Please check the console for details.');
             this.resetPlayButton(buttonElement);
-            this.resetPlayingItem(buttonElement);
+            this.resetPlayingItem(buttonElement.closest('.story-item'));
             this.currentPlayingItem = null;
         };
     },
