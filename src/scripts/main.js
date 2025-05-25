@@ -1481,7 +1481,9 @@ const StoryPlayer = {
             if (isTextEffectivelyUndefined) {
                 displayText = `<span class="undefined-text">(${(langMessages?.undefinedText || 'undefined')})</span>`;
             } else {
-                displayText = this.formatText ? this.formatText(textForSelectedLang) : textForSelectedLang; // formatTextメソッドがあれば使用
+                // \n を <br> に置換
+                const formattedTextWithBreaks = textForSelectedLang.replace(/\n/g, '<br>');
+                displayText = this.formatText ? this.formatText(formattedTextWithBreaks) : formattedTextWithBreaks; // formatTextメソッドがあれば使用
             }
             textDiv.innerHTML = displayText; // innerHTML を使用して span タグを解釈
 
