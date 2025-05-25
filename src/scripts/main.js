@@ -1020,38 +1020,56 @@ const StoryPlayer = {
         }
     },
 
-    playModalAudio(audioSrc) {
+    playModalAudio(audioSrc, buttonElement) { // buttonElement を引数に追加
         if (this.audioElement) {
             this.audioElement.pause();
         }
         this.audioElement = new Audio(audioSrc);
-        const playButton = this.activeModal?.querySelector('.modal-audio-play-btn .material-icons');
+        const playIcon = buttonElement ? buttonElement.querySelector('.material-icons') : null;
 
         this.audioElement.play()
             .then(() => {
-                if (playButton) playButton.textContent = 'stop';
+                if (playIcon) playIcon.textContent = 'stop';
             })
             .catch(error => {
                 console.error('Modal audio playback error:', error);
-                if (playButton) playButton.textContent = 'play_arrow';
+                if (playIcon) playIcon.textContent = 'play_arrow';
             });
 
         this.audioElement.onended = () => {
-            if (playButton) playButton.textContent = 'play_arrow';
+            if (playIcon) playIcon.textContent = 'play_arrow';
         };
         this.audioElement.onerror = () => {
-            if (playButton) playButton.textContent = 'play_arrow';
+            if (playIcon) playIcon.textContent = 'play_arrow';
             console.error('Modal audio error event');
         };
     },
 
     toggleModalAudio(buttonElement, audioSrc) {
-        if (this.audioElement && !this.audioElement.paused && this.audioElement.src.endsWith(audioSrc.substring(audioSrc.lastIndexOf('/') + 1))) {
-            this.audioElement.pause();
-            buttonElement.querySelector('.material-icons').textContent = 'play_arrow';
+        const playIcon = buttonElement.querySelector('.material-icons');
+        const currentAudioFileName = this.audioElement ? this.audioElement.src.substring(this.audioElement.src.lastIndexOf('/') + 1) : null;
+        const newAudioFileName = audioSrc.substring(audioSrc.lastIndexOf('/') + 1);
+
+        if (this.audioElement && currentAudioFileName === newAudioFileName) {
+            // 同じ音源に対する操作
+            if (!this.audioElement.paused) {
+                // 再生中なので停止
+                this.audioElement.pause();
+                if (playIcon) playIcon.textContent = 'play_arrow';
+            } else {
+                // 停止中なので再生
+                this.audioElement.play()
+                    .then(() => {
+                        if (playIcon) playIcon.textContent = 'stop';
+                    })
+                    .catch(error => {
+                        console.error('Modal audio playback error (resume):', error);
+                        if (playIcon) playIcon.textContent = 'play_arrow';
+                    });
+            }
         } else {
-            this.playModalAudio(audioSrc);
-            // playModalAudio内でアイコン変更
+            // 新しい音源、または audioElement がない場合
+            this.playModalAudio(audioSrc, buttonElement);
         }
     },
 
