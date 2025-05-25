@@ -194,7 +194,8 @@ function generateWarnings() {
 
 
 const STORAGE_KEY = {
-    PASSWORD: 'auth_password'
+    PASSWORD: 'auth_password',
+    CONTRIBUTOR_INFO: 'contributor_info'
 };
 
 const Auth = {
@@ -872,6 +873,9 @@ const StoryPlayer = {
         const editedTextFromForm = document.getElementById('modal-text').value;
         const contributorNameFromForm = document.getElementById('modal-contributor').value;
 
+        // 入力者情報をlocalStorageに保存
+        localStorage.setItem(STORAGE_KEY.CONTRIBUTOR_INFO, contributorNameFromForm);
+
         console.log('Selected Character ID from form:', selectedCharacterIdFromForm);
         // this.availableCharacters を使用してキャラクターオブジェクトを検索
         const selectedCharacter = this.availableCharacters.find(c => c.id === selectedCharacterIdFromForm);
@@ -1153,10 +1157,19 @@ const StoryPlayer = {
 
         const contributorSection = document.createElement('div');
         contributorSection.className = 'contributor-section-content'; // CSS用クラス
-        contributorSection.innerHTML = `
-            <label for="modal-contributor">${langModalTexts?.contributorName || 'Contributor Name (Optional)'}:</label>
-            <input type="text" id="modal-contributor" name="contributor">
-        `;
+        const contributorInput = document.createElement('input'); // input要素を直接作成
+        contributorInput.type = 'text';
+        contributorInput.id = 'modal-contributor';
+        contributorInput.name = 'contributor';
+        // localStorageから保存された投稿者情報を読み込んで設定
+        const savedContributor = localStorage.getItem(STORAGE_KEY.CONTRIBUTOR_INFO);
+        if (savedContributor !== null) { // nullもチェック（空文字は有効な値として扱う）
+            contributorInput.value = savedContributor;
+        }
+
+        contributorSection.innerHTML = `<label for="modal-contributor">${langModalTexts?.contributorName || 'Contributor Name (Optional)'}:</label>`;
+        contributorSection.appendChild(contributorInput); // input要素を追加
+
         contributorDetails.appendChild(contributorSection);
         // summaryのテキストをdetailsのopen/closeで変更する
         contributorDetails.addEventListener('toggle', function () {
